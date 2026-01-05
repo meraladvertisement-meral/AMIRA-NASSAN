@@ -14,9 +14,12 @@ interface ConfigPageProps {
 }
 
 interface ManualQuestion {
+  type: QuestionType;
   text: string;
-  choices: string[];
-  correctIdx: number;
+  choices: string[]; // For MCQ
+  correctIdx: number; // For MCQ
+  tfAnswer?: boolean; // For TF
+  fitbAnswer?: string; // For FITB
   error?: string;
 }
 
@@ -29,12 +32,9 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ settings, setSettings, onStart,
   const [globalError, setGlobalError] = useState<string | null>(null);
   
   // Manual Mode State
-  const [manualQuestions, setManualQuestions] = useState<ManualQuestion[]>(() => {
-    const saved = localStorage.getItem('sqg_manual_draft');
-    return saved ? JSON.parse(saved) : [
-      { text: '', choices: ['', '', '', ''], correctIdx: -1 }
-    ];
-  });
+  const [manualStep, setManualStep] = useState<'setup' | 'edit'>('setup');
+  const [manualCounts, setManualCounts] = useState({ MCQ: 5, TF: 0, FITB: 0 });
+  const [manualQuestions, setManualQuestions] = useState<ManualQuestion[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -46,10 +46,6 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ settings, setSettings, onStart,
   useEffect(() => {
     localStorage.setItem('sqg_draft_settings', JSON.stringify(settings));
   }, [settings]);
-
-  useEffect(() => {
-    localStorage.setItem('sqg_manual_draft', JSON.stringify(manualQuestions));
-  }, [manualQuestions]);
 
   const updateDifficulty = (d: Difficulty) => setSettings({ ...settings, difficulty: d });
   
@@ -86,28 +82,46 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ settings, setSettings, onStart,
     }
   };
 
-  const addManualQuestion = () => {
-    if (manualQuestions.length >= 20) return;
-    setManualQuestions([...manualQuestions, { text: '', choices: ['', '', '', ''], correctIdx: -1 }]);
-  };
+  // Manual Setup Logic
+  const totalManualQuestions = manualCounts.MCQ + manualCounts.TF + manualCounts.FITB;
+  const isSetupValid = totalManualQuestions >= 5 && totalManualQuestions <= 20;
 
-  const removeManualQuestion = (idx: number) => {
-    if (manualQuestions.length <= 1) return;
-    setManualQuestions(manualQuestions.filter((_, i) => i !== idx));
+  const handleCreateQuestions = () => {
+    const newQuestions: ManualQuestion[] = [];
+    
+    for (let i = 0; i < manualCounts.MCQ; i++) {
+      newQuestions.push({ type: 'MCQ', text: '', choices: ['', '', '', ''], correctIdx: -1 });
+    }
+    for (let i = 0; i < manualCounts.TF; i++) {
+      newQuestions.push({ type: 'TF', text: '', choices: [], correctIdx: -1, tfAnswer: undefined });
+    }
+    for (let i = 0; i < manualCounts.FITB; i++) {
+      newQuestions.push({ type: 'FITB', text: '', choices: [], correctIdx: -1, fitbAnswer: '' });
+    }
+
+    setManualQuestions(newQuestions);
+    setManualStep('edit');
   };
 
   const updateManualQuestion = (idx: number, updates: Partial<ManualQuestion>) => {
-    setManualQuestions(manualQuestions.map((q, i) => i === idx ? { ...q, ...updates, error: undefined } : q));
+    setManualQuestions(prev => prev.map((q, i) => i === idx ? { ...q, ...updates, error: undefined } : q));
     setGlobalError(null);
   };
 
   const validateManualQuiz = (): boolean => {
     let hasError = false;
-    const newQuestions = manualQuestions.map((q, i) => {
+    const newQuestions = manualQuestions.map((q) => {
       let error = '';
-      if (!q.text.trim()) error = t.next === 'Next' ? 'Question text is missing' : 'Fragetext fehlt';
-      else if (q.choices.some(c => !c.trim())) error = t.next === 'Next' ? 'All 4 choices must be filled' : 'Alle 4 Optionen müssen ausgefüllt sein';
-      else if (q.correctIdx === -1) error = t.next === 'Next' ? 'Select the correct answer' : 'Richtige Antwort wählen';
+      if (!q.text.trim()) {
+        error = t.appName === 'SnapQuizGame' ? 'Question prompt is missing' : 'Fragetext fehlt';
+      } else if (q.type === 'MCQ') {
+        if (q.choices.some(c => !c.trim())) error = 'Fill all 4 choices';
+        else if (q.correctIdx === -1) error = 'Select the correct answer';
+      } else if (q.type === 'TF') {
+        if (q.tfAnswer === undefined) error = 'Select True or False';
+      } else if (q.type === 'FITB') {
+        if (!q.fitbAnswer?.trim()) error = 'Enter correct answer';
+      }
 
       if (error) {
         hasError = true;
@@ -118,35 +132,45 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ settings, setSettings, onStart,
 
     if (hasError) {
       setManualQuestions(newQuestions);
-      setGlobalError(t.validateError);
+      setGlobalError(t.validateError || "Fix highlighted fields");
       return false;
     }
     return true;
   };
 
   const handleManualSubmit = () => {
-    try {
-      if (!validateManualQuiz()) return;
+    if (!validateManualQuiz()) return;
 
-      const converted: Question[] = manualQuestions.map((q, i) => ({
+    const converted: Question[] = manualQuestions.map((q, i) => {
+      const base = {
         id: `manual-${Date.now()}-${i}`,
-        type: 'MCQ',
+        type: q.type,
         prompt: q.text,
-        options: q.choices,
-        correctAnswer: q.choices[q.correctIdx]
-      }));
+        explanation: 'Manual question'
+      };
 
-      onStartManual(converted);
-    } catch (err) {
-      console.error("Manual submit failed", err);
-      setGlobalError("Something went wrong. Please check your inputs.");
-    }
+      if (q.type === 'MCQ') {
+        return { ...base, options: q.choices, correctAnswer: q.choices[q.correctIdx] } as Question;
+      } else if (q.type === 'TF') {
+        const ans = q.tfAnswer ? 'True' : 'False';
+        return { ...base, options: ['True', 'False'], correctAnswer: ans } as Question;
+      } else {
+        return { ...base, options: [], correctAnswer: q.fitbAnswer! } as Question;
+      }
+    });
+
+    onStartManual(converted);
   };
 
-  const validCount = manualQuestions.filter(q => q.text.trim() && q.choices.every(c => c.trim()) && q.correctIdx !== -1).length;
+  const updateCount = (type: keyof typeof manualCounts, delta: number) => {
+    setManualCounts(prev => ({
+      ...prev,
+      [type]: Math.max(0, prev[type] + delta)
+    }));
+  };
 
   return (
-    <div className="p-6 max-w-lg mx-auto min-h-screen flex flex-col gap-6 relative">
+    <div className="p-6 max-w-lg mx-auto min-h-screen flex flex-col gap-6 relative pb-24">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-black uppercase text-brand-lime">{t.inputTitle}</h2>
         <button onClick={onBack} className="glass px-4 py-2 rounded-xl text-sm font-bold active:scale-95">
@@ -154,7 +178,6 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ settings, setSettings, onStart,
         </button>
       </div>
 
-      {/* Creation Mode Selector */}
       <div className="flex bg-white/10 p-1 rounded-2xl">
         <button 
           onClick={() => setCreationMode('ai')}
@@ -297,80 +320,165 @@ const ConfigPage: React.FC<ConfigPageProps> = ({ settings, setSettings, onStart,
           </ThreeDButton>
         </>
       ) : (
-        <div className="space-y-6 pb-24">
-          <div className="sticky top-0 z-10 py-2">
-             <div className="bg-brand-dark/80 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex justify-between items-center shadow-xl">
-                <span className="text-white font-bold">{t.questionCount}: {manualQuestions.length} / 20</span>
-                <span className={`font-black text-sm px-3 py-1 rounded-full ${validCount === manualQuestions.length ? 'bg-brand-lime/20 text-brand-lime' : 'bg-brand-gold/20 text-brand-gold'}`}>
-                  {validCount} {t.next === 'Next' ? 'Ready' : 'Bereit'}
-                </span>
-             </div>
-          </div>
-
-          {manualQuestions.map((q, qIdx) => (
-            <GlassCard key={qIdx} className={`space-y-4 transition-all border-2 ${q.error ? 'border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'border-white/10'}`}>
-              <div className="flex justify-between items-center">
-                <span className="text-brand-lime font-black"># {qIdx + 1}</span>
-                <button 
-                  onClick={() => removeManualQuestion(qIdx)}
-                  className="text-red-400 text-xs font-bold uppercase tracking-widest hover:text-red-300 p-2"
-                >
-                  {t.removeQuestion}
-                </button>
-              </div>
-              
-              {q.error && (
-                <p className="text-red-400 text-xs font-bold animate-pulse uppercase tracking-tight">
-                  ⚠️ {q.error}
-                </p>
-              )}
-
-              <textarea 
-                value={q.text}
-                onChange={(e) => updateManualQuestion(qIdx, { text: e.target.value })}
-                className="w-full bg-white/5 border border-white/10 rounded-xl p-3 focus:outline-none focus:border-brand-lime min-h-[80px] text-sm"
-                placeholder={t.questionPlaceholder}
-              />
-              <div className="grid grid-cols-1 gap-2">
-                {q.choices.map((choice, cIdx) => (
-                  <div key={cIdx} className="flex gap-2">
-                    <input 
-                      type="text"
-                      value={choice}
-                      onChange={(e) => {
-                        const newChoices = [...q.choices];
-                        newChoices[cIdx] = e.target.value;
-                        updateManualQuestion(qIdx, { choices: newChoices });
-                      }}
-                      className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-brand-lime"
-                      placeholder={`${t.choicePlaceholder} ${String.fromCharCode(65 + cIdx)}`}
-                    />
-                    <button 
-                      onClick={() => updateManualQuestion(qIdx, { correctIdx: cIdx })}
-                      className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${q.correctIdx === cIdx ? 'bg-brand-lime text-brand-dark shadow-[0_0_10px_#84cc16]' : 'bg-white/10 text-white/50'}`}
-                    >
-                      {t.correctLabel}
-                    </button>
+        <div className="space-y-6">
+          {manualStep === 'setup' ? (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-300 space-y-6">
+              <h3 className="text-xl font-black italic text-brand-lime drop-shadow-sm text-center">Manual Quiz Setup</h3>
+              <GlassCard className="space-y-8">
+                {[
+                  { key: 'MCQ', label: t.mcq, icon: '📝' },
+                  { key: 'TF', label: t.tf, icon: '⚖️' },
+                  { key: 'FITB', label: t.fitb, icon: '🕳️' }
+                ].map((item) => (
+                  <div key={item.key} className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{item.icon}</span>
+                      <span className="font-bold text-white/80">{item.label}</span>
+                    </div>
+                    <div className="flex items-center gap-4 bg-white/5 p-2 rounded-2xl border border-white/10 shadow-inner">
+                      <button 
+                        onClick={() => updateCount(item.key as any, -1)}
+                        className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center font-black active:scale-90 transition"
+                      >-</button>
+                      <span className="w-8 text-center font-black text-xl text-brand-lime">
+                        {manualCounts[item.key as keyof typeof manualCounts]}
+                      </span>
+                      <button 
+                        onClick={() => updateCount(item.key as any, 1)}
+                        className="w-10 h-10 rounded-xl bg-brand-lime text-brand-dark flex items-center justify-center font-black active:scale-90 transition shadow-lg"
+                      >+</button>
+                    </div>
                   </div>
                 ))}
-              </div>
-            </GlassCard>
-          ))}
-          
-          <button 
-            onClick={addManualQuestion}
-            className="w-full py-4 border-2 border-dashed border-white/20 rounded-2xl text-white/50 font-bold hover:bg-white/5 hover:border-white/40 transition"
-          >
-            + {t.addQuestion}
-          </button>
 
-          <ThreeDButton 
-            variant="primary" 
-            className="w-full py-5 text-xl" 
-            onClick={handleManualSubmit}
-          >
-            {t.manualStart}
-          </ThreeDButton>
+                <div className="pt-6 border-t border-white/10 text-center">
+                  <p className="text-sm font-bold text-white/40 uppercase tracking-widest mb-1">Total Questions</p>
+                  <p className={`text-4xl font-black italic ${isSetupValid ? 'text-brand-lime' : 'text-red-400 animate-pulse'}`}>
+                    {totalManualQuestions}
+                  </p>
+                  <p className="text-[10px] text-white/30 font-bold mt-2 italic">Must be between 5 and 20</p>
+                </div>
+              </GlassCard>
+
+              <ThreeDButton 
+                variant="primary" 
+                className="w-full py-5 text-xl" 
+                disabled={!isSetupValid}
+                onClick={handleCreateQuestions}
+              >
+                Create Questions
+              </ThreeDButton>
+              
+              <button 
+                onClick={() => setCreationMode('ai')}
+                className="w-full text-white/40 text-sm font-bold uppercase tracking-widest hover:text-white transition"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div className="animate-in fade-in duration-300 space-y-6">
+              <div className="sticky top-0 z-20 py-2 bg-brand-dark/50 backdrop-blur-lg -mx-6 px-6">
+                <div className="bg-white/10 border border-white/20 rounded-2xl p-4 flex justify-between items-center shadow-2xl">
+                   <div className="flex flex-col">
+                     <span className="text-[10px] font-black uppercase text-brand-lime">Manual Editor</span>
+                     <span className="text-white font-bold">{manualQuestions.length} Questions</span>
+                   </div>
+                   <button 
+                     onClick={() => setManualStep('setup')}
+                     className="text-[10px] font-black bg-white/10 px-4 py-2 rounded-xl active:scale-95 transition uppercase tracking-widest"
+                   >
+                     Reset Counts
+                   </button>
+                </div>
+              </div>
+
+              {manualQuestions.map((q, idx) => (
+                <GlassCard key={idx} className={`space-y-4 transition-all border-2 ${q.error ? 'border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'border-white/10'}`}>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <span className="w-8 h-8 rounded-full bg-brand-lime/20 text-brand-lime flex items-center justify-center font-black text-xs">
+                        {idx + 1}
+                      </span>
+                      <span className="text-[10px] font-black uppercase bg-white/10 px-2 py-1 rounded text-white/60">
+                        {q.type}
+                      </span>
+                    </div>
+                  </div>
+
+                  {q.error && <p className="text-red-400 text-[10px] font-bold uppercase animate-pulse">⚠️ {q.error}</p>}
+
+                  <textarea 
+                    value={q.text}
+                    onChange={(e) => updateManualQuestion(idx, { text: e.target.value })}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl p-3 focus:outline-none focus:border-brand-lime min-h-[80px] text-sm"
+                    placeholder={t.questionPlaceholder}
+                  />
+
+                  {q.type === 'MCQ' && (
+                    <div className="grid gap-2">
+                      {q.choices.map((choice, cIdx) => (
+                        <div key={cIdx} className="flex gap-2">
+                          <input 
+                            type="text"
+                            value={choice}
+                            onChange={(e) => {
+                              const newChoices = [...q.choices];
+                              newChoices[cIdx] = e.target.value;
+                              updateManualQuestion(idx, { choices: newChoices });
+                            }}
+                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-brand-lime"
+                            placeholder={`${t.choicePlaceholder} ${String.fromCharCode(65 + cIdx)}`}
+                          />
+                          <button 
+                            onClick={() => updateManualQuestion(idx, { correctIdx: cIdx })}
+                            className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${q.correctIdx === cIdx ? 'bg-brand-lime text-brand-dark' : 'bg-white/10 text-white/50'}`}
+                          >
+                            {t.correctLabel}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {q.type === 'TF' && (
+                    <div className="flex gap-2">
+                      {[true, false].map((val) => (
+                        <button
+                          key={String(val)}
+                          onClick={() => updateManualQuestion(idx, { tfAnswer: val })}
+                          className={`flex-1 py-4 rounded-xl font-black uppercase transition-all border-2 ${q.tfAnswer === val ? 'bg-brand-purple border-brand-purple shadow-lg' : 'bg-white/5 border-white/10 text-white/40'}`}
+                        >
+                          {val ? t.tf.split('/')[0] || 'True' : t.tf.split('/')[1] || 'False'}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {q.type === 'FITB' && (
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-white/40">Correct Answer</label>
+                      <input 
+                        type="text"
+                        value={q.fitbAnswer}
+                        onChange={(e) => updateManualQuestion(idx, { fitbAnswer: e.target.value })}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-brand-lime"
+                        placeholder="Enter the hidden word..."
+                      />
+                    </div>
+                  )}
+                </GlassCard>
+              ))}
+
+              <ThreeDButton 
+                variant="primary" 
+                className="w-full py-5 text-xl" 
+                onClick={handleManualSubmit}
+              >
+                Start Quiz
+              </ThreeDButton>
+            </div>
+          )}
         </div>
       )}
 
