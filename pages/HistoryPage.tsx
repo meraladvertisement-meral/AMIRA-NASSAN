@@ -30,13 +30,14 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ onSelectQuiz, onBack, t }) =>
     setHistory(historyService.getHistory());
   };
 
-  const handlePdfAction = (record: QuizRecord, action: 'generate' | 'download' | 'delete', e: React.MouseEvent) => {
+  // Added async to handle Promise<string> from pdfService
+  const handlePdfAction = async (record: QuizRecord, action: 'generate' | 'download' | 'delete', e: React.MouseEvent) => {
     e.stopPropagation();
     if (action === 'generate') {
       historyService.updateRecord(record.id, { pdfGenerated: true });
       setHistory(historyService.getHistory());
     } else if (action === 'download') {
-      const url = pdfService.generateExamPdf(record);
+      const url = await pdfService.generateExamPdf(record);
       const link = document.createElement('a');
       link.href = url;
       link.download = `Exam-${record.id}.pdf`;

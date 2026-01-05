@@ -39,7 +39,12 @@ export class GeminiService {
     });
   }
 
-  async generateQuiz(content: string, settings: QuizSettings, isImage: boolean = false): Promise<{ questions: Question[], language: string }> {
+  async generateQuiz(
+    content: string, 
+    settings: QuizSettings, 
+    isImage: boolean = false, 
+    signal?: AbortSignal
+  ): Promise<{ questions: Question[], language: string }> {
     if (!process.env.API_KEY) return this.mockQuiz(settings);
 
     try {
@@ -47,7 +52,8 @@ export class GeminiService {
       const prompt = `Generate a compact JSON quiz from this content. 
       Settings: Difficulty: ${settings.difficulty}, Count: ${settings.questionCount}, Types: ${settings.types.join(",")}.
       Detect language and use it for questions.
-      CRITICAL: For FITB questions, the 'options' field MUST contain the correct answer plus 3 plausible distractors (total 4).`;
+      CRITICAL: Return ONLY valid JSON. 
+      For FITB questions, the 'options' field MUST contain the correct answer plus 3 plausible distractors (total 4).`;
 
       if (isImage) {
         const compressed = await this.compressImage(content);
@@ -59,7 +65,7 @@ export class GeminiService {
         parts = [{ text: `${prompt}\n\nContent: "${content.substring(0, 6000)}"` }];
       }
 
-      const response = await this.ai.models.generateContent({
+      const generationPromise = this.ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: { parts },
         config: {
@@ -89,10 +95,23 @@ export class GeminiService {
         }
       });
 
-      return JSON.parse(response.text || "{}");
-    } catch (error) {
+      const timeoutPromise = new Promise((_, reject) => {
+        const timer = setTimeout(() => reject(new Error("TIMEOUT")), 45000);
+        signal?.addEventListener('abort', () => {
+          clearTimeout(timer);
+          reject(new Error("ABORTED"));
+        });
+      });
+
+      const response = await Promise.race([generationPromise, timeoutPromise]) as any;
+      
+      if (!response.text) throw new Error("INVALID_RESPONSE");
+      
+      return JSON.parse(response.text);
+    } catch (error: any) {
+      if (error.message === 'ABORTED') throw error;
       console.error("Gemini failed", error);
-      return this.mockQuiz(settings);
+      throw error;
     }
   }
 

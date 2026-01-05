@@ -35,57 +35,64 @@ export const billingService = {
     return data;
   },
 
-  consumePlay(): boolean {
+  /**
+   * Consumes a play credit.
+   * @param isAdmin If true, bypasses all checks and does not modify storage.
+   * @returns boolean True if the play is allowed, false otherwise.
+   */
+  consumePlay(isAdmin: boolean = false): boolean {
+    // 1. Admin Bypass - Logic and LocalStorage check for safety
+    if (isAdmin || localStorage.getItem('snapquiz_admin') === '1') {
+      return true;
+    }
+
     const ent = this.getEntitlement();
     
     // Fair Use for Unlimited
     if (ent.planId === 'unlimited') return true;
 
     // Order: 1. Daily -> 2. Bonus -> 3. Packs -> 4. Subscription
+    let consumed = false;
     if (ent.dailyFreeRemaining > 0) {
       ent.dailyFreeRemaining--;
+      consumed = true;
     } else if (ent.bonusPlays > 0) {
       ent.bonusPlays--;
+      consumed = true;
     } else if (ent.packs.length > 0) {
       const activePack = ent.packs.find(p => p.used < p.count);
-      if (activePack) activePack.used++;
-      else return this.checkSubscriptionQuota(ent);
+      if (activePack) {
+        activePack.used++;
+        consumed = true;
+      } else {
+        consumed = this.checkSubscriptionQuota(ent);
+      }
     } else {
-      return this.checkSubscriptionQuota(ent);
+      consumed = this.checkSubscriptionQuota(ent);
     }
 
-    this.save(ent);
-    return true;
+    if (consumed) {
+      this.save(ent);
+    }
+    
+    return consumed;
   },
 
-  // Fix: Removed 'private' modifier which is not allowed in object literal methods.
   checkSubscriptionQuota(ent: Entitlement): boolean {
     if (ent.planId === 'plus') {
       const quota = ent.cycle === 'monthly' ? 200 : 2400;
       if (ent.subMonthlyPlaysUsed < quota) {
         ent.subMonthlyPlaysUsed++;
-        this.save(ent);
         return true;
       }
     }
     return false;
   },
 
-  // Fix: Added missing method to handle bonus plays granted via the affiliate program.
   addBonusPlays(count: number) {
     const ent = this.getEntitlement();
     ent.bonusPlays += count;
     this.save(ent);
-  },
-
-  calculateRefund(pricePaid: number, planId: PlanId, playsUsed: number, daysUsed: number): number {
-    let deduction = 0;
-    if (planId === 'plus') {
-      deduction = (playsUsed / 200) * pricePaid;
-    } else if (planId === 'unlimited') {
-      deduction = (daysUsed / 30) * pricePaid;
-    }
-    return Math.max(0, pricePaid - deduction);
   },
 
   save(ent: Entitlement) {

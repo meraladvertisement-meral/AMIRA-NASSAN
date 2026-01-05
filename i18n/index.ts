@@ -78,7 +78,17 @@ export const translations = {
     choicePlaceholder: "Choice",
     correctLabel: "Correct",
     validateError: "Please fill all fields and select a correct answer for all questions.",
-    manualStart: "Start Custom Quiz"
+    manualStart: "Start Custom Quiz",
+    roomNotFound: "Room not found, expired, or session started.",
+    cancel: "Cancel",
+    retry: "Retry",
+    generationTimeout: "Generation took too long. Please try again.",
+    generationError: "Something went wrong. Please check your content and retry.",
+    invalidResponse: "Invalid response from AI. Please retry.",
+    inviteFriend: "Invite Friend",
+    previewQuestions: "Preview Questions",
+    waitingForOpponent: "Waiting for opponent...",
+    opponentConnected: "Opponent Connected!"
   },
   de: {
     appName: "SnapQuizGame",
@@ -156,6 +166,16 @@ export const translations = {
     choicePlaceholder: "Option",
     correctLabel: "Korrekt",
     validateError: "Bitte füllen Sie alle Felder aus und wählen Sie für alle Fragen eine richtige Antwort aus.",
-    manualStart: "Eigenes Quiz starten"
+    manualStart: "Eigenes Quiz starten",
+    roomNotFound: "Raum nicht gefunden, abgelaufen oder bereits gestartet.",
+    cancel: "Abbrechen",
+    retry: "Wiederholen",
+    generationTimeout: "Die Erstellung hat zu lange gedauert. Bitte erneut versuchen.",
+    generationError: "Etwas ist schief gelaufen. Bitte prüfen Sie Ihren Inhalt.",
+    invalidResponse: "Ungültige Antwort der KI. Bitte erneut versuchen.",
+    inviteFriend: "Freund einladen",
+    previewQuestions: "Fragen Vorschau",
+    waitingForOpponent: "Warte auf Gegner...",
+    opponentConnected: "Gegner verbunden!"
   }
 };

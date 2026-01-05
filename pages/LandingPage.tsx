@@ -8,13 +8,14 @@ import { LegalDocType } from '../services/legalService';
 interface LandingPageProps {
   onNext: () => void;
   onGuest: () => void;
+  onAdmin?: () => void;
   lang: Language;
   setLang: (l: Language) => void;
   t: any;
   onOpenLegal: (type: LegalDocType) => void;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onNext, onGuest, lang, setLang, t, onOpenLegal }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onNext, onGuest, onAdmin, lang, setLang, t, onOpenLegal }) => {
   return (
     <div className="flex flex-col items-center justify-center p-6 h-screen overflow-hidden relative">
       {/* Background Decor */}
@@ -62,10 +63,20 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNext, onGuest, lang, setLan
           {t.continueGuest}
         </ThreeDButton>
         
-        <div className="flex justify-center gap-6 text-white/50 text-[10px] pt-4 font-bold uppercase tracking-widest">
-          <button onClick={() => onOpenLegal('terms')} className="hover:text-brand-lime transition-colors">{t.terms}</button>
-          <button onClick={() => onOpenLegal('privacy')} className="hover:text-brand-lime transition-colors">{t.privacy}</button>
-          <button onClick={() => onOpenLegal('impressum')} className="hover:text-brand-lime transition-colors">{t.impressum}</button>
+        <div className="flex flex-col items-center gap-4 pt-4">
+          <div className="flex justify-center gap-6 text-white/50 text-[10px] font-bold uppercase tracking-widest">
+            <button onClick={() => onOpenLegal('terms')} className="hover:text-brand-lime transition-colors">{t.terms}</button>
+            <button onClick={() => onOpenLegal('privacy')} className="hover:text-brand-lime transition-colors">{t.privacy}</button>
+            <button onClick={() => onOpenLegal('impressum')} className="hover:text-brand-lime transition-colors">{t.impressum}</button>
+          </div>
+          
+          {/* Subtle Admin Trigger */}
+          <button 
+            onClick={onAdmin} 
+            className="text-[8px] text-white/10 hover:text-white/30 uppercase tracking-[0.5em] transition-colors"
+          >
+            Admin
+          </button>
         </div>
       </GlassCard>
     </div>

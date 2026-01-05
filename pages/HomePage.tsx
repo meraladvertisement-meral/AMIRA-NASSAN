@@ -16,6 +16,7 @@ interface HomePageProps {
   audio: any;
   isGuest: boolean;
   demoUsed: boolean;
+  isAdmin?: boolean;
 }
 
 const HomePage: React.FC<HomePageProps> = ({ 
@@ -29,7 +30,8 @@ const HomePage: React.FC<HomePageProps> = ({
   t, 
   audio, 
   isGuest, 
-  demoUsed 
+  demoUsed,
+  isAdmin
 }) => {
   return (
     <div className="p-6 max-w-lg mx-auto min-h-screen flex flex-col justify-center gap-6">
@@ -44,10 +46,13 @@ const HomePage: React.FC<HomePageProps> = ({
               <path d="M50 15 L20 30 L50 45 L80 30 Z" fill="#6b21a8" />
             </svg>
           </div>
-          <h1 className="text-2xl font-black italic text-white drop-shadow-md tracking-tighter">SnapQuizGame</h1>
+          <div>
+            <h1 className="text-2xl font-black italic text-white drop-shadow-md tracking-tighter">SnapQuizGame</h1>
+            {isAdmin && <p className="text-[10px] text-brand-lime font-black uppercase tracking-widest">Admin Mode Active</p>}
+          </div>
         </div>
         <div className="flex gap-2">
-          {isGuest && (
+          {(isGuest || isAdmin) && (
             <button 
               onClick={onLogout}
               className="glass p-3 rounded-2xl text-xs font-bold shadow-lg active:scale-90 transition-transform"
@@ -64,7 +69,7 @@ const HomePage: React.FC<HomePageProps> = ({
         </div>
       </div>
 
-      {isGuest && demoUsed && (
+      {isGuest && demoUsed && !isAdmin && (
         <GlassCard className="bg-brand-gold/30 border-brand-gold/60 text-center animate-bounce-short z-20">
           <p className="font-bold text-white mb-2 text-lg">⚠️ {t.demoUsed}</p>
           <p className="text-sm opacity-90 leading-relaxed">{t.guestBlocker}</p>
@@ -80,9 +85,9 @@ const HomePage: React.FC<HomePageProps> = ({
       <GlassCard className="space-y-4 shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-white/20">
         <ThreeDButton 
           variant="primary" 
-          className={`w-full flex items-center justify-between py-5 ${isGuest && demoUsed ? 'opacity-40 grayscale cursor-not-allowed' : ''}`} 
-          onClick={() => (isGuest && demoUsed ? null : onSelectMode(GameMode.SOLO))}
-          disabled={isGuest && demoUsed}
+          className={`w-full flex items-center justify-between py-5 ${(isGuest && demoUsed && !isAdmin) ? 'opacity-40 grayscale cursor-not-allowed' : ''}`} 
+          onClick={() => ((isGuest && demoUsed && !isAdmin) ? null : onSelectMode(GameMode.SOLO))}
+          disabled={isGuest && demoUsed && !isAdmin}
         >
           <span className="text-xl">{isGuest ? t.tryDemo : t.solo}</span>
           <span className="text-3xl">🚀</span>
@@ -91,18 +96,18 @@ const HomePage: React.FC<HomePageProps> = ({
         <div className="grid grid-cols-2 gap-2">
           <ThreeDButton 
             variant="secondary" 
-            className={`flex-1 flex flex-col items-center justify-center py-4 ${isGuest ? 'opacity-25 pointer-events-none' : ''}`} 
+            className={`flex-1 flex flex-col items-center justify-center py-4 ${isGuest && !isAdmin ? 'opacity-25 pointer-events-none' : ''}`} 
             onClick={() => onSelectMode(GameMode.DUEL)}
-            disabled={isGuest}
+            disabled={isGuest && !isAdmin}
           >
             <span className="text-xs font-black uppercase mb-1">{t.createRoom}</span>
             <span className="text-2xl">⚔️</span>
           </ThreeDButton>
           <ThreeDButton 
             variant="secondary" 
-            className={`flex-1 flex flex-col items-center justify-center py-4 bg-white/5 ${isGuest ? 'opacity-25 pointer-events-none' : ''}`} 
+            className={`flex-1 flex flex-col items-center justify-center py-4 bg-white/5 ${isGuest && !isAdmin ? 'opacity-25 pointer-events-none' : ''}`} 
             onClick={onJoinDuel}
-            disabled={isGuest}
+            disabled={isGuest && !isAdmin}
           >
             <span className="text-xs font-black uppercase mb-1">{t.joinRoom}</span>
             <span className="text-2xl">🤝</span>
@@ -111,13 +116,13 @@ const HomePage: React.FC<HomePageProps> = ({
 
         <ThreeDButton 
           variant="warning" 
-          className={`w-full flex items-center justify-between py-5 ${isGuest ? 'opacity-25 pointer-events-none' : ''}`} 
+          className={`w-full flex items-center justify-between py-5 ${isGuest && !isAdmin ? 'opacity-25 pointer-events-none' : ''}`} 
           onClick={() => onSelectMode(GameMode.TEACHER)}
-          disabled={isGuest}
+          disabled={isGuest && !isAdmin}
         >
           <div className="flex items-center gap-2">
             <span className="text-xl">{t.teacher}</span>
-            {isGuest && <span className="text-xs bg-black/40 px-2 py-0.5 rounded-full">🔒</span>}
+            {(isGuest && !isAdmin) && <span className="text-xs bg-black/40 px-2 py-0.5 rounded-full">🔒</span>}
           </div>
           <span className="text-3xl">👩‍🏫</span>
         </ThreeDButton>
@@ -126,30 +131,30 @@ const HomePage: React.FC<HomePageProps> = ({
       <div className="grid grid-cols-2 gap-4">
         <ThreeDButton 
           variant="secondary" 
-          className={`text-sm py-4 bg-white/5 border-white/10 ${isGuest ? 'opacity-25 pointer-events-none' : ''}`} 
+          className={`text-sm py-4 bg-white/5 border-white/10 ${isGuest && !isAdmin ? 'opacity-25 pointer-events-none' : ''}`} 
           onClick={onHistory}
-          disabled={isGuest}
+          disabled={isGuest && !isAdmin}
         >
-          📁 {t.history} {isGuest && "🔒"}
+          📁 {t.history} {(isGuest && !isAdmin) && "🔒"}
         </ThreeDButton>
         <ThreeDButton 
           variant="secondary" 
-          className={`text-sm py-4 bg-white/5 border-white/10 ${isGuest ? 'opacity-25 pointer-events-none' : ''}`} 
+          className={`text-sm py-4 bg-white/5 border-white/10 ${isGuest && !isAdmin ? 'opacity-25 pointer-events-none' : ''}`} 
           onClick={onPricing}
-          disabled={isGuest}
+          disabled={isGuest && !isAdmin}
         >
-          💎 {t.pricing} {isGuest && "🔒"}
+          💎 {t.pricing} {(isGuest && !isAdmin) && "🔒"}
         </ThreeDButton>
       </div>
       
       <div className="grid grid-cols-2 gap-4">
         <ThreeDButton 
           variant="secondary" 
-          className={`text-sm py-4 bg-white/5 border-white/10 ${isGuest ? 'opacity-25 pointer-events-none' : ''}`} 
+          className={`text-sm py-4 bg-white/5 border-white/10 ${isGuest && !isAdmin ? 'opacity-25 pointer-events-none' : ''}`} 
           onClick={onAffiliate}
-          disabled={isGuest}
+          disabled={isGuest && !isAdmin}
         >
-          🤝 {t.affiliate} {isGuest && "🔒"}
+          🤝 {t.affiliate} {(isGuest && !isAdmin) && "🔒"}
         </ThreeDButton>
         <ThreeDButton variant="secondary" className="text-sm py-4 bg-white/5 border-brand-gold/30" onClick={onInfoCenter}>
           ℹ️ Info & Support
