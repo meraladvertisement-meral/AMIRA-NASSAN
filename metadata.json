@@ -1,0 +1,8 @@
+{
+  "name": "SnapQuizGame",
+  "description": "A mobile-first educational quiz app that turns Image, PDF, or Text into interactive quizzes using Google Gemini AI, featuring Solo, Duel, and Teacher modes.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
