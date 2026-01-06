@@ -20,6 +20,7 @@ export const pdfService = {
   needsImageRendering(text: string): boolean {
     if (!text) return false;
     // Detects anything outside standard ISO-8859-1 (Latin-1)
+    // This includes Arabic, Turkish special chars, Emojis, etc.
     return /[^\x00-\xFF]/.test(text);
   },
 
@@ -34,29 +35,32 @@ export const pdfService = {
     if (!ctx) return null;
 
     const maxWidthPx = Math.max(1, maxWidthMm * pxPerMm);
-    const fontWeight = isBold ? 'bold' : 'normal';
-    // Use system fonts that support a wide range of Unicode
-    const fontStack = `${fontWeight} ${fontPx}px "Fredoka", "Arial", "sans-serif"`;
+    const fontWeight = isBold ? '700' : '400';
+    // Use system fonts that support a wide range of Unicode. 
+    // Fredoka is loaded in index.html, fallbacks added for safety.
+    const fontStack = `${fontWeight} ${fontPx}px "Fredoka", "Segoe UI", "Tahoma", "Arial", "sans-serif"`;
     
     ctx.font = fontStack;
     
     // Core Logic: Only trigger RTL if Arabic script characters are present.
-    // Turkish/Latin will default to LTR.
+    // Turkish/Latin will default to LTR even if they contain non-Latin1 chars.
     const isRtl = ARABIC_REGEX.test(text);
     ctx.direction = isRtl ? 'rtl' : 'ltr';
     ctx.textAlign = isRtl ? 'right' : 'left';
 
-    // Wrapping logic
-    const words = text.split(' ');
+    // Wrapping logic: Always use logical order (currentLine + word) 
+    // and let the Canvas engine handle bidi display.
+    const words = text.split(/\s+/);
     const lines: string[] = [];
     let currentLine = '';
 
     for (let i = 0; i < words.length; i++) {
-      const testLine = currentLine ? (isRtl ? `${words[i]} ${currentLine}` : `${currentLine} ${words[i]}`) : words[i];
+      const word = words[i];
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
       const metrics = ctx.measureText(testLine);
       if (metrics.width > maxWidthPx && i > 0) {
         lines.push(currentLine);
-        currentLine = words[i];
+        currentLine = word;
       } else {
         currentLine = testLine;
       }
@@ -67,7 +71,7 @@ export const pdfService = {
     canvas.width = maxWidthPx;
     canvas.height = Math.max(1, lines.length * lineHeight);
 
-    // Reset context properties after resize
+    // Reset context properties after resize (resizing canvas clears context)
     ctx.font = fontStack;
     ctx.direction = isRtl ? 'rtl' : 'ltr';
     ctx.textAlign = isRtl ? 'right' : 'left';
@@ -75,6 +79,7 @@ export const pdfService = {
     ctx.fillStyle = '#000000';
 
     lines.forEach((line, index) => {
+      // For RTL, we fill text starting from the right edge of the canvas
       const xPos = isRtl ? canvas.width : 0;
       ctx.fillText(line, xPos, index * lineHeight);
     });
@@ -119,17 +124,16 @@ export const pdfService = {
           const isAr = ARABIC_REGEX.test(text);
           // If Arabic, align to right margin, otherwise align to left margin (e.g. Turkish specials)
           const xPos = isAr ? (pageWidth - margin - render.wMm) : margin;
-          doc.addImage(render.dataUrl, 'PNG', xPos, y, render.wMm, render.hMm, undefined, 'FAST');
+          // Standard high-quality image rendering for crisp text
+          doc.addImage(render.dataUrl, 'PNG', xPos, y, render.wMm, render.hMm);
           y += render.hMm + 2;
         }
       } else {
-        // Standard Latin-1 rendering
+        // Standard Latin-1 rendering (Fast path for basic English/German)
         doc.setFontSize(fontSize);
         doc.setFont("helvetica", isBold ? "bold" : "normal");
         
-        // Safety: Replace anything not in Latin-1 to prevent jsPDF metric crashes
-        const sanitized = text.replace(/[^\x00-\xFF]/g, '?');
-        const lines = doc.splitTextToSize(sanitized, contentWidth);
+        const lines = doc.splitTextToSize(text, contentWidth);
         const textHeight = lines.length * (fontSize * 0.5);
         
         checkPage(textHeight + 5);
@@ -139,8 +143,10 @@ export const pdfService = {
     };
 
     // --- Header ---
-    // Detect if the quiz primary language is Arabic for the header translation
-    const isAr = ARABIC_REGEX.test(quiz.questions[0]?.prompt || '');
+    // Detect if the quiz contains Arabic content for localized headers
+    const sampleText = quiz.questions[0]?.prompt || '';
+    const isAr = ARABIC_REGEX.test(sampleText);
+    
     const titleText = isAr ? 'SnapQuizGame — امتحان' : 'SnapQuizGame — Exam';
     addTextBlock(titleText, 22, true);
     addTextBlock(`ID: ${quiz.id} | ${new Date().toLocaleDateString()}`, 10);
@@ -191,8 +197,8 @@ export const pdfService = {
 
       for (let i = 0; i < quiz.questions.length; i++) {
         const q = quiz.questions[i];
-        const ans = isAr ? `${i + 1}. الإجابة: ${q.correctAnswer}` : `${i + 1}. Answer: ${q.correctAnswer}`;
-        addTextBlock(ans, 12);
+        const ansLabel = isAr ? `${i + 1}. الإجابة: ` : `${i + 1}. Answer: `;
+        addTextBlock(ansLabel + q.correctAnswer, 12);
       }
     }
 

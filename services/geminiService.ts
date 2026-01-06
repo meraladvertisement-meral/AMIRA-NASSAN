@@ -66,7 +66,8 @@ export class GeminiService {
       }
 
       const generationPromise = this.ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        // Updated to gemini-flash-lite-latest for ultra-fast low-latency responses
+        model: "gemini-flash-lite-latest",
         contents: { parts },
         config: {
           responseMimeType: "application/json",

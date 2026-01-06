@@ -18,6 +18,7 @@ export function useAudio() {
   const [audioEnabled, setAudioEnabled] = useState(false);
   const musicRef = useRef<HTMLAudioElement | null>(null);
 
+  // Monitor mute changes and apply to current music
   useEffect(() => {
     localStorage.setItem('sqg_muted', isMuted.toString());
     if (musicRef.current) {
@@ -33,19 +34,36 @@ export function useAudio() {
     }
   }, []);
 
+  // Ensure music stops when the component using the hook unmounts
+  useEffect(() => {
+    return () => {
+      if (musicRef.current) {
+        musicRef.current.pause();
+        musicRef.current = null;
+      }
+    };
+  }, []);
+
   const playSfx = useCallback((type: keyof typeof SFX) => {
     if (isMuted || !audioEnabled) return;
     const audio = new Audio(SFX[type]);
-    audio.play().catch(() => {});
+    audio.play().catch((err) => console.warn('SFX playback failed:', err));
   }, [isMuted, audioEnabled]);
 
   const startMusic = useCallback((type: keyof typeof MUSIC) => {
     if (!audioEnabled) return;
+    
+    // Stop any existing music before starting new track
     stopMusic();
-    musicRef.current = new Audio(MUSIC[type]);
-    musicRef.current.loop = true;
-    musicRef.current.muted = isMuted;
-    musicRef.current.play().catch(() => {});
+    
+    const audioObj = new Audio(MUSIC[type]);
+    audioObj.loop = true;
+    audioObj.muted = isMuted;
+    musicRef.current = audioObj;
+    
+    audioObj.play().catch((err) => {
+      console.warn('Music playback failed (interaction required?):', err);
+    });
   }, [isMuted, audioEnabled, stopMusic]);
 
   const enableAudio = () => {

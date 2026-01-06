@@ -20,8 +20,17 @@ const BalloonGame: React.FC<BalloonGameProps> = ({ onComplete, t, audio }) => {
   const [popped, setPopped] = useState(0);
   const [balloons, setBalloons] = useState<Balloon[]>([]);
 
+  // Background Music Lifecycle
   useEffect(() => {
     audio.startMusic('arcade');
+    
+    return () => {
+      audio.stopMusic();
+    };
+  }, [audio]);
+
+  // Game Timer
+  useEffect(() => {
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
@@ -32,20 +41,8 @@ const BalloonGame: React.FC<BalloonGameProps> = ({ onComplete, t, audio }) => {
       });
     }, 1000);
     
-    return () => {
-      clearInterval(timer);
-      audio.stopMusic();
-    };
-  }, [audio]);
-
-  useEffect(() => {
-    if (timeLeft === 0) {
-      setTimeout(() => {
-        // We only trigger auto-complete if the user is still on this screen
-        // In a real app we'd use a ref to track mount status
-      }, 2000);
-    }
-  }, [timeLeft]);
+    return () => clearInterval(timer);
+  }, []);
 
   const addBalloon = useCallback(() => {
     if (timeLeft <= 0) return;
@@ -79,7 +76,7 @@ const BalloonGame: React.FC<BalloonGameProps> = ({ onComplete, t, audio }) => {
   };
 
   const handleFinish = () => {
-    audio.stopMusic();
+    audio.stopMusic(); // Ensure music is stopped explicitly before callback
     onComplete(popped);
   };
 

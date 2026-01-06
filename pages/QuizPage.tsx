@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { QuizRecord, QuizResult } from '../types/quiz';
+import { QuizRecord, QuizResult, GameMode } from '../types/quiz';
 import { useQuizEngine } from '../hooks/useQuizEngine';
 import { GlassCard } from '../components/layout/GlassCard';
 import { ThreeDButton } from '../components/layout/ThreeDButton';
+import { Timer } from '../components/quiz/Timer';
 
 interface QuizPageProps {
   quiz: QuizRecord;
@@ -11,11 +12,14 @@ interface QuizPageProps {
   onQuit: () => void;
   onProgress?: (index: number, score: number) => void;
   opponentProgress?: { index: number; score: number; finished: boolean };
+  mode?: GameMode;
   t: any;
   audio: any;
 }
 
-const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, onProgress, opponentProgress, t, audio }) => {
+const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, onProgress, opponentProgress, mode, t, audio }) => {
+  const timePerQuestion = (mode === 'DUEL' || mode === 'TEACHER') ? 20 : undefined;
+
   const {
     currentIndex,
     currentQuestion,
@@ -24,27 +28,87 @@ const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, onProgres
     score,
     isFinished,
     fitbMode,
-    fitbOptions
-  } = useQuizEngine(quiz.questions, onComplete);
+    fitbOptions,
+    currentAttempts,
+    timeLeft
+  } = useQuizEngine(quiz.questions, onComplete, timePerQuestion);
 
   const [inputText, setInputText] = useState('');
+  const [feedback, setFeedback] = useState<{
+    selected: string | null;
+    isCorrect: boolean | null;
+    showCorrect: boolean;
+  }>({
+    selected: null,
+    isCorrect: null,
+    showCorrect: false
+  });
 
-  // Sync Progress
+  // Handle Background Music Lifecycle
+  useEffect(() => {
+    audio.startMusic('calm');
+    return () => {
+      audio.stopMusic();
+    };
+  }, [audio]);
+
+  // Sync Progress with server for Duel/Teacher
   useEffect(() => {
     onProgress?.(currentIndex, score);
-  }, [currentIndex, score]);
+  }, [currentIndex, score, onProgress]);
 
   const onChoice = (choice: string) => {
-    handleAnswer(choice);
-    // Simple feedback logic for audio
-    const isCorrect = choice.toLowerCase() === currentQuestion.correctAnswer.toLowerCase();
-    if (isCorrect) audio.playSfx('correct');
-    else audio.playSfx('wrong');
+    if (feedback.selected) return; // منع التكرار أثناء عرض النتيجة
+
+    const isCorrect = choice.trim().toLowerCase() === currentQuestion.correctAnswer.trim().toLowerCase();
+    
+    setFeedback({
+      selected: choice,
+      isCorrect: isCorrect,
+      showCorrect: false
+    });
+
+    if (isCorrect) {
+      audio.playSfx('correct');
+      // انتظار ثانية قبل الانتقال ليرى المستخدم اللون الأخضر
+      setTimeout(() => {
+        handleAnswer(choice);
+        setFeedback({ selected: null, isCorrect: null, showCorrect: false });
+        setInputText('');
+      }, 1000);
+    } else {
+      audio.playSfx('wrong');
+      
+      // منطق تحديد المحاولة الأخيرة
+      const isLastAttempt = 
+        (currentQuestion.type === 'TF') || 
+        (currentQuestion.type === 'MCQ' && currentAttempts >= 1) ||
+        (currentQuestion.type === 'FITB' && fitbMode === 'MCQ');
+
+      if (isLastAttempt) {
+        // المحاولة الثانية فاشلة: أحمر -> انتظار 0.8ث -> إظهار الإجابة الصحيحة بالأخضر -> انتظار ثانية -> انتقال
+        setTimeout(() => {
+          setFeedback(prev => ({ ...prev, showCorrect: true }));
+          setTimeout(() => {
+            handleAnswer(choice);
+            setFeedback({ selected: null, isCorrect: null, showCorrect: false });
+            setInputText('');
+          }, 1200);
+        }, 800);
+      } else {
+        // المحاولة الأولى فاشلة: أحمر فقط ثم إعادة التعيين للسماح بمحاولة ثانية
+        setTimeout(() => {
+          handleAnswer(choice); 
+          setFeedback({ selected: null, isCorrect: null, showCorrect: false });
+          if (currentQuestion.type === 'FITB') setInputText('');
+        }, 1000);
+      }
+    }
   };
 
   const onFitbSubmit = () => {
+    if (!inputText.trim()) return;
     onChoice(inputText);
-    setInputText('');
   };
 
   const handleQuitRequest = () => {
@@ -53,88 +117,139 @@ const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, onProgres
     }
   };
 
+  const getButtonVariant = (opt: string) => {
+    const isSelected = feedback.selected === opt;
+    const isCorrectAnswer = opt.toLowerCase() === currentQuestion.correctAnswer.toLowerCase();
+
+    // اللون الأخضر في حالتين: اختيار صح أو إظهار الإجابة الصحيحة بعد الخطأ الثاني
+    if ((isSelected && feedback.isCorrect) || (feedback.showCorrect && isCorrectAnswer)) return 'primary';
+    // اللون الأحمر في حالة اختيار خطأ
+    if (isSelected && feedback.isCorrect === false) return 'danger';
+    
+    return 'secondary';
+  };
+
+  const isCritical = timePerQuestion !== undefined && (timeLeft / timePerQuestion) <= 0.25;
+
   return (
-    <div className="p-6 max-w-2xl mx-auto min-h-screen flex flex-col justify-center gap-6">
-      <div className="flex justify-between items-center text-white/80 font-bold uppercase tracking-widest text-sm">
-        <button onClick={handleQuitRequest} className="glass px-3 py-1 rounded-lg text-[10px] active:scale-95">
+    <div className="p-6 max-w-2xl mx-auto min-h-screen flex flex-col justify-center gap-6 relative">
+      {/* Critical Time Effect */}
+      {isCritical && (
+        <div className="fixed inset-0 pointer-events-none z-[-5] animate-pulse duration-700 bg-[radial-gradient(circle_at_center,transparent_40%,rgba(239,68,68,0.15)_100%)]"></div>
+      )}
+
+      {/* Header Info */}
+      <div className="flex justify-between items-center text-white/80 font-bold uppercase tracking-widest text-sm relative z-10">
+        <button onClick={handleQuitRequest} className="glass px-3 py-1 rounded-lg text-[10px] active:scale-95 transition-all">
           ✕ {t.home}
         </button>
-        <span>{t.player || 'Question'} {currentIndex + 1} / {quiz.questions.length}</span>
-        <span className="text-brand-lime">Score: {score}</span>
+        <div className="flex flex-col items-center">
+          <span className="text-[10px] opacity-60">{t.player || 'Question'}</span>
+          <span>{currentIndex + 1} / {quiz.questions.length}</span>
+        </div>
+        <div className="flex flex-col items-end">
+           <span className="text-[10px] opacity-60">Score</span>
+           <span className="text-brand-lime font-black">{score}</span>
+        </div>
       </div>
 
-      <div className="space-y-2">
-        {/* User Progress */}
-        <div className="w-full bg-white/10 h-3 rounded-full overflow-hidden border border-white/5">
+      {/* Progress & Timers */}
+      <div className="space-y-6 relative z-10">
+        <div className="relative w-full bg-white/5 h-1.5 rounded-full overflow-hidden border border-white/10">
           <div 
-            className="h-full bg-brand-lime transition-all duration-300 shadow-[0_0_10px_#84cc16]"
+            className="h-full bg-brand-lime transition-all duration-500 ease-out shadow-[0_0_15px_rgba(132,204,22,0.5)]"
             style={{ width: `${((currentIndex + 1) / quiz.questions.length) * 100}%` }}
           ></div>
         </div>
+
+        {timePerQuestion !== undefined && (
+          <Timer timeLeft={timeLeft} totalTime={timePerQuestion} className="px-1" />
+        )}
         
-        {/* Opponent Progress (Duel Mode Only) */}
         {opponentProgress && (
-          <div className="flex items-center gap-2">
-             <span className="text-[8px] font-black text-white/40 uppercase">Opponent</span>
-             <div className="flex-1 bg-white/5 h-1 rounded-full overflow-hidden">
+          <div className="flex items-center gap-2 glass p-2 rounded-xl border-brand-purple/20 bg-brand-purple/5 shadow-lg">
+             <span className="text-[8px] font-black text-brand-purple/60 uppercase tracking-tighter">Opponent</span>
+             <div className="flex-1 bg-black/20 h-1.5 rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-brand-purple transition-all duration-300"
+                  className="h-full bg-brand-purple transition-all duration-700 shadow-[0_0_10px_rgba(107,33,168,0.4)]"
                   style={{ width: `${((opponentProgress.index + (opponentProgress.finished ? 0 : 1)) / quiz.questions.length) * 100}%` }}
                 ></div>
              </div>
-             <span className="text-[8px] font-black text-brand-purple uppercase">S:{opponentProgress.score}</span>
+             <div className="text-[8px] font-black text-brand-purple uppercase flex flex-col items-end leading-none">
+                <span>Score</span>
+                <span>{opponentProgress.score}</span>
+             </div>
           </div>
         )}
       </div>
 
-      <GlassCard className={`relative ${wrongShake ? 'animate-shake border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.2)]' : 'border-white/20'}`}>
-        <h2 className="text-2xl font-bold mb-8 text-center leading-relaxed drop-shadow-sm">
+      {/* Question Card */}
+      <GlassCard className={`relative transition-all duration-300 z-10 ${wrongShake ? 'animate-shake border-red-500/50 shadow-[0_0_40px_rgba(239,68,68,0.15)]' : isCritical ? 'border-red-500/30' : 'border-white/20'}`}>
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 glass px-4 py-1 rounded-full border-white/20">
+           <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">{currentQuestion.type}</span>
+        </div>
+
+        <h2 className="text-2xl font-bold mb-10 text-center leading-tight drop-shadow-md pt-4">
           {currentQuestion.prompt}
         </h2>
 
-        <div className="grid gap-3">
-          {currentQuestion.type === 'MCQ' || currentQuestion.type === 'TF' ? (
-            currentQuestion.options.map((opt, i) => (
-              <ThreeDButton 
-                key={i} 
-                variant="secondary" 
-                className="text-left py-4 text-base normal-case"
-                onClick={() => onChoice(opt)}
-              >
-                {opt}
-              </ThreeDButton>
-            ))
+        {/* Answers Area */}
+        <div className="grid gap-4">
+          {currentQuestion.type === 'MCQ' || currentQuestion.type === 'TF' || (currentQuestion.type === 'FITB' && fitbMode === 'MCQ') ? (
+            <div className="grid gap-4">
+              {(currentQuestion.type === 'FITB' ? fitbOptions : currentQuestion.options).map((opt, i) => (
+                <ThreeDButton 
+                  key={i} 
+                  variant={getButtonVariant(opt)}
+                  className={`text-left py-5 px-6 text-base normal-case border-brand-purple/30 group relative overflow-hidden transition-colors duration-200`}
+                  onClick={() => onChoice(opt)}
+                  disabled={!!feedback.selected}
+                >
+                  <div className="absolute inset-0 bg-white/5 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                  <span className="relative z-10 flex items-center gap-4">
+                    <span className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/10 text-white/40 text-xs font-black">{String.fromCharCode(65 + i)}</span>
+                    {opt}
+                  </span>
+                </ThreeDButton>
+              ))}
+            </div>
           ) : (
-            fitbMode === 'INPUT' ? (
-              <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-5">
+              <div className="relative">
                 <input 
                   autoFocus
                   type="text"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && onFitbSubmit()}
-                  className="w-full bg-white/10 border-2 border-white/20 rounded-2xl p-4 text-xl focus:outline-none focus:border-brand-lime transition-all text-center"
-                  placeholder={t.next === 'Next' ? "Type answer..." : "Antwort eingeben..."}
+                  onKeyDown={(e) => e.key === 'Enter' && !feedback.selected && onFitbSubmit()}
+                  disabled={!!feedback.selected}
+                  className={`w-full bg-white/5 border-2 rounded-3xl p-6 text-xl focus:outline-none transition-all text-center placeholder:text-white/10 font-bold ${
+                    feedback.isCorrect === true ? 'border-brand-lime text-brand-lime shadow-[0_0_15px_rgba(132,204,22,0.2)]' : 
+                    feedback.isCorrect === false ? 'border-red-500 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'border-white/10'
+                  }`}
+                  placeholder={t.next === 'Next' ? "Type your answer..." : "Antwort eingeben..."}
                 />
-                <ThreeDButton onClick={onFitbSubmit} className="py-4">{t.submit}</ThreeDButton>
+                {feedback.showCorrect && (
+                  <p className="text-center text-brand-lime font-black mt-2 animate-bounce">
+                    Correct: {currentQuestion.correctAnswer}
+                  </p>
+                )}
               </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {fitbOptions.map((opt, i) => (
-                  <ThreeDButton 
-                    key={i} 
-                    variant="warning"
-                    className="text-center py-4 text-base normal-case"
-                    onClick={() => onChoice(opt)}
-                  >
-                    {opt}
-                  </ThreeDButton>
-                ))}
-              </div>
-            )
+              <ThreeDButton 
+                onClick={onFitbSubmit} 
+                disabled={!!feedback.selected || !inputText.trim()}
+                className="py-5 shadow-brand-lime/20"
+              >
+                {t.submit}
+              </ThreeDButton>
+            </div>
           )}
         </div>
       </GlassCard>
+
+      {/* Decorative BG */}
+      <div className="fixed top-0 right-0 w-64 h-64 bg-brand-purple opacity-10 blur-[100px] pointer-events-none -z-10"></div>
+      <div className="fixed bottom-0 left-0 w-64 h-64 bg-brand-lime opacity-5 blur-[100px] pointer-events-none -z-10"></div>
     </div>
   );
 };
