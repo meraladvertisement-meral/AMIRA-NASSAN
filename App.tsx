@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AppScreen, GameMode, QuizSettings, QuizRecord, QuizResult, Question } from './types/quiz';
 import { Language, translations } from './i18n';
@@ -37,9 +36,9 @@ import TeacherLobbyPage from './pages/TeacherLobbyPage';
 // Components
 import { Modal } from './components/layout/Modal';
 
-// Admin Configuration
-const ADMIN_EMAILS = ["meral.advertisement@gmail.com"];
-const ADMIN_PASS = "SNAP-ADMIN-2026";
+// Admin Authorization Constants
+const AUTHORIZED_ADMIN_EMAIL = "meral.advertisement@gmail.com";
+const ADMIN_SECURITY_CODE = "SNAP-ADMIN-2026";
 
 const App: React.FC = () => {
   const [screen, setScreen] = useState<AppScreen>('LANDING');
@@ -89,21 +88,23 @@ const App: React.FC = () => {
         const storedAdminFlag = localStorage.getItem('snapquiz_admin');
         const storedAdminUid = localStorage.getItem('snapquiz_admin_uid');
         
-        // Check if current user is an authorized admin and has the local persistent key
-        const isAuthorized = userEmail && ADMIN_EMAILS.includes(userEmail);
-        
-        if (isAuthorized && storedAdminFlag === '1' && storedAdminUid === user.uid) {
+        // Strict Admin Verification
+        const isAuthorizedEmail = userEmail === AUTHORIZED_ADMIN_EMAIL;
+        const hasAdminFlag = storedAdminFlag === '1';
+        const matchesStoredUid = storedAdminUid === user.uid;
+
+        if (isAuthorizedEmail && hasAdminFlag && matchesStoredUid) {
           setIsAdmin(true);
           setIsGuest(false);
         } else if (!user.isAnonymous) {
-          // If logged in with another non-authorized Google account, revoke admin state
+          // If logged in with a standard account (not authorized admin), ensure admin state is cleared
           if (isAdmin) {
             setIsAdmin(false);
             clearAdminStorage();
           }
         }
       } else {
-        // Not logged in at all
+        // Logged out
         setIsAdmin(false);
         clearAdminStorage();
         signInAnonymously(auth);
@@ -121,13 +122,13 @@ const App: React.FC = () => {
 
   const handleAdminTrigger = async () => {
     try {
-      // Step 1: Force Google login / Account Selection
+      // Step 1: Trigger Google Sign-In
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
       const userEmail = user.email?.toLowerCase();
 
-      // Step 2: Identity Authorization Check
-      if (!userEmail || !ADMIN_EMAILS.includes(userEmail)) {
+      // Step 2: Strict Email Authorization Check
+      if (userEmail !== AUTHORIZED_ADMIN_EMAIL) {
         await signOut(auth);
         alert(`ACCESS DENIED\n\nThe account '${user.email}' is not authorized for Admin access.`);
         setIsAdmin(false);
@@ -135,26 +136,27 @@ const App: React.FC = () => {
         return;
       }
 
-      // Step 3: Secondary Security Challenge (Password)
-      const password = prompt("🔐 ADMIN SECURITY VERIFICATION\nAccessing bypass mode for: " + user.email + "\n\nPlease enter the master admin code:");
+      // Step 3: Password Challenge
+      const password = prompt("🔐 ADMIN IDENTITY CONFIRMED\nAuthorized: " + user.email + "\n\nEnter master admin code:");
       
-      if (password === ADMIN_PASS) {
+      if (password === ADMIN_SECURITY_CODE) {
         setIsAdmin(true);
         localStorage.setItem('snapquiz_admin', '1');
         localStorage.setItem('snapquiz_admin_uid', user.uid);
         localStorage.setItem('snapquiz_admin_email', user.email || '');
         localStorage.setItem('snapquiz_admin_since', new Date().toISOString());
-        alert("ADMIN ACCESS GRANTED 🔓\nYou now have unlimited quiz generations and bypass all play quotas.");
+        alert("ADMIN ACCESS GRANTED 🔓\nYou are now in bypass mode (Unlimited plays).");
         setScreen('HOME');
       } else {
-        if (password !== null) alert("INCORRECT CODE\nAdmin privileges were not enabled.");
+        if (password !== null) alert("INCORRECT CODE\nAdmin privileges remain locked.");
         setIsAdmin(false);
+        clearAdminStorage();
       }
     } catch (e: any) {
       console.error("Admin Gate Error:", e);
       if (e.code === 'auth/unauthorized-domain') {
         const domain = window.location.hostname;
-        alert(`FIREBASE CONFIG ERROR: Domain '${domain}' is not authorized for Google Login in the Firebase Console.`);
+        alert(`FIREBASE AUTH ERROR: Domain '${domain}' is not authorized. Please add it to your Firebase Console (Auth > Settings > Domains).`);
       } else if (e.code !== 'auth/popup-closed-by-user') {
         alert("Authentication failed: " + (e.message || "Unknown error"));
       }
@@ -164,7 +166,7 @@ const App: React.FC = () => {
   const handleStartGeneration = async (content: string, isImage: boolean = false) => {
     if (isGeneratingRef.current) return;
     
-    // Admin check allows bypass of daily quotas and paywalls
+    // Check if user has plays left (Admins ALWAYS bypass this)
     const canPlay = isAdmin || (isGuest ? !demoUsed : billingService.consumePlay(isAdmin));
     if (!canPlay) {
       setScreen(isGuest ? 'HOME' : 'PRICING');
@@ -244,6 +246,7 @@ const App: React.FC = () => {
 
   const handleCompleteQuiz = (result: QuizResult) => {
     setLastResult(result);
+    // History is saved for persistent users (including Admins)
     if (!isGuest && currentQuiz) historyService.saveQuiz(currentQuiz);
     setScreen('RESULT');
   };
