@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { Question, QuizResult, QuizAttempt } from '../types/quiz';
 
@@ -119,18 +118,29 @@ export function useQuizEngine(
           // Prepare options for the multiple-choice attempt
           let opts = Array.isArray(currentQuestion.options) ? [...currentQuestion.options] : [];
           
-          // Ensure correct answer is in the options
-          if (!opts.some(o => o.toLowerCase() === currentQuestion.correctAnswer.toLowerCase())) {
+          // Ensure correct answer is in the options and case is preserved from the original if possible
+          const lowerAnswer = currentQuestion.correctAnswer.toLowerCase();
+          const hasAnswer = opts.some(o => o.toLowerCase() === lowerAnswer);
+          
+          if (!hasAnswer) {
             opts.push(currentQuestion.correctAnswer);
           }
           
-          // Fill with fallbacks if for some reason the options are empty or too few
-          if (opts.length < 2) {
-            const distractors = ["Wait", "Maybe", "Possibly", "Unknown"].filter(d => d.toLowerCase() !== currentQuestion.correctAnswer.toLowerCase());
-            while(opts.length < 4) opts.push(distractors.pop() || "Choice");
+          // Strictly ensure exactly 4 options by filtering duplicates and filling gaps
+          const uniqueOpts = Array.from(new Set(opts.map(o => o.trim())));
+          let finalOpts = uniqueOpts.slice(0, 4);
+
+          // Fallback distractors if the AI didn't provide enough
+          const fallbacks = ["Incorrect", "False", "None", "Alternative", "Other", "Maybe", "Unlikely"];
+          while (finalOpts.length < 4) {
+            const nextFallback = fallbacks.shift();
+            if (nextFallback && !finalOpts.some(o => o.toLowerCase() === nextFallback.toLowerCase())) {
+              finalOpts.push(nextFallback);
+            }
           }
           
-          setFitbOptions(opts.sort(() => Math.random() - 0.5));
+          // Final shuffle
+          setFitbOptions(finalOpts.sort(() => Math.random() - 0.5));
         } else {
           logFail();
           advance();

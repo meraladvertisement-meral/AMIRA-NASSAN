@@ -1,18 +1,14 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AppScreen, GameMode, QuizSettings, QuizRecord, QuizResult, Question } from './types/quiz';
 import { Language, translations } from './i18n';
 import { useAudio } from './hooks/useAudio';
 import { GeminiService } from './services/geminiService';
 import { historyService } from './services/historyService';
-import { billingService } from './services/billingService';
-import { legalService, LegalDocType } from './services/legalService';
 import { firebaseService } from './services/firebaseService';
 import { auth, googleProvider } from './services/firebase';
 import { 
   onAuthStateChanged, 
   signInWithPopup, 
-  signInAnonymously, 
   signOut 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -33,16 +29,14 @@ import DuelLobbyPage from './pages/DuelLobbyPage';
 import DuelJoinPage from './pages/DuelJoinPage';
 import TeacherLobbyPage from './pages/TeacherLobbyPage';
 
-// Admin Security Whitelist
 const ADMIN_EMAILS = ["meral.advertisement@gmail.com"];
 
 export default function App() {
   const [screen, setScreen] = useState<AppScreen>('LANDING');
   const [lang, setLang] = useState<Language>(() => (localStorage.getItem('sqg_ui_lang') as Language) || 'en');
-  const [isAdmin, setIsAdmin] = useState(() => localStorage.getItem('snapquiz_admin') === '1');
-  const [demoUsed, setDemoUsed] = useState(() => localStorage.getItem('sqg_demo_used') === 'true');
   const [user, setUser] = useState<any>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [authError, setAuthError] = useState<{ title: string; message: string; code: string } | null>(null);
 
   // Game Logic State
   const [mode, setMode] = useState<GameMode>(GameMode.SOLO);
@@ -61,78 +55,92 @@ export default function App() {
   const t = useMemo(() => translations[lang], [lang]);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Handle Deep Linking / Query Parameters
-  useEffect(() => {
-    const handleNavigation = () => {
-      const params = new URLSearchParams(window.location.search);
-      const join = params.get('join') || params.get('joinRoom') || params.get('code');
-      const modeParam = params.get('mode');
+  const isAdmin = useMemo(() => {
+    return user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase());
+  }, [user]);
 
-      if (join && screen !== 'ARENA' && screen !== 'RESULT') {
-        setRoomCode(join.toUpperCase());
-        if (modeParam === 'teacher') setMode(GameMode.TEACHER);
-        else setMode(GameMode.DUEL);
-        setScreen('JOIN_ROOM');
-      }
-    };
-
-    handleNavigation();
-    window.addEventListener('popstate', handleNavigation);
-    return () => window.removeEventListener('popstate', handleNavigation);
-  }, [screen]);
-
-  useEffect(() => {
-    localStorage.setItem('sqg_ui_lang', lang);
-  }, [lang]);
-
+  // Mandatory Authentication Flow & Path Protection
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setIsAuthLoading(false);
-      
-      const email = u?.email?.toLowerCase();
-      if (email && ADMIN_EMAILS.includes(email)) {
-        setIsAdmin(true);
-        localStorage.setItem('snapquiz_admin', '1');
-      } else {
-        setIsAdmin(false);
-        localStorage.removeItem('snapquiz_admin');
-      }
 
-      if (u && screen === 'LANDING' && !window.location.search.includes('join')) {
-        setScreen('HOME');
+      const path = window.location.pathname;
+      const params = new URLSearchParams(window.location.search);
+      
+      // Define path patterns
+      const isJoinPath = path === '/join' || params.has('join') || params.has('code');
+      const isPlayPath = path.startsWith('/play');
+      const isProtected = ['/play', '/teacher', '/admin', '/config', '/history'].some(p => path.startsWith(p)) || path === '/';
+
+      if (!u) {
+        // If not logged in and trying to access protected content
+        setScreen('LANDING');
+        if (isProtected && path !== '/') {
+          localStorage.setItem('auth_redirect', window.location.href);
+        }
+      } else {
+        // User is authenticated
+        // 1. Handle Deep Linking from Query Params (Priority)
+        const joinCode = params.get('join') || params.get('code');
+        const m = params.get('mode');
+
+        if (joinCode) {
+          setRoomCode(joinCode.toUpperCase());
+          if (m === 'teacher') setMode(GameMode.TEACHER);
+          else setMode(GameMode.DUEL);
+          setScreen('JOIN_ROOM');
+          return;
+        }
+
+        // 2. Handle Path-based navigation (for SPA safety)
+        if (path === '/join') {
+          setScreen('JOIN_ROOM');
+        } else if (isPlayPath) {
+          setScreen('HOME');
+        } else if (screen === 'LANDING') {
+          setScreen('HOME');
+        }
       }
-      if (!u) signInAnonymously(auth).catch(console.error);
     });
     return () => unsubscribe();
   }, [screen]);
 
-  const handleAdminTrigger = async () => {
+  const handleLogin = async () => {
+    setAuthError(null);
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const userEmail = result.user.email?.toLowerCase();
-
-      if (userEmail && ADMIN_EMAILS.includes(userEmail)) {
-        setIsAdmin(true);
-        localStorage.setItem('snapquiz_admin', '1');
-        setScreen('HOME');
+      // Use Firebase Auth with Google
+      await signInWithPopup(auth, googleProvider);
+      
+      const redirect = localStorage.getItem('auth_redirect');
+      if (redirect) {
+        localStorage.removeItem('auth_redirect');
+        window.location.href = redirect; 
       } else {
-        await signOut(auth);
-        setIsAdmin(false);
-        localStorage.removeItem('snapquiz_admin');
-        alert("ACCESS DENIED");
+        setScreen('HOME');
       }
     } catch (e: any) {
-      console.error("Admin Auth Error:", e);
-      if (e.code !== 'auth/popup-closed-by-user') {
-        alert("Authentication failed: " + e.message);
+      console.error("Login Error:", e);
+      // Specific handling for Unauthorized Domain error
+      if (e.code === 'auth/unauthorized-domain') {
+        setAuthError({
+          title: "Domain Authorization Required",
+          message: `Your current domain (${window.location.hostname}) is not authorized in the Firebase Console. To fix this, log in to Firebase, go to "Authentication" -> "Settings" -> "Authorized Domains", and add "${window.location.hostname}".`,
+          code: e.code
+        });
+      } else if (e.code !== 'auth/popup-closed-by-user') {
+        setAuthError({
+          title: "Login Failed",
+          message: e.message || "An unexpected authentication error occurred.",
+          code: e.code || "unknown"
+        });
       }
     }
   };
 
   const handleStartQuiz = async (content: string, isImage: boolean = false) => {
-    if (!isAdmin && user?.isAnonymous && demoUsed) {
-      alert(t.demoUsed);
+    if (!user) {
+      setScreen('LANDING');
       return;
     }
 
@@ -175,12 +183,8 @@ export default function App() {
       }
     } catch (err: any) {
       if (err.message === 'ABORTED') return;
-      console.error("Generation error details:", err);
-      let msg = t.generationError;
-      if (err.message === 'INVALID_API_KEY') msg = "Invalid API Key. Check Google AI Studio settings.";
-      else if (err.message === 'EMPTY_RESPONSE') msg = "AI returned an empty response. Try different content.";
-      
-      setLoadingError(msg);
+      console.error("Quiz Generation Failed:", err);
+      setLoadingError(err.message || t.generationError);
     }
   };
 
@@ -197,15 +201,24 @@ export default function App() {
     setScreen('READY');
   };
 
-  if (isAuthLoading) return null;
+  if (isAuthLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-brand-dark">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-brand-lime border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-white font-black uppercase tracking-widest text-xs animate-pulse">Authenticating...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen font-sans selection:bg-brand-lime selection:text-brand-dark">
       {screen === 'LANDING' && (
         <LandingPage 
-          onNext={() => setScreen('HOME')} 
-          onGuest={() => setScreen('HOME')} 
-          onAdmin={handleAdminTrigger}
+          onNext={handleLogin} 
+          onGuest={handleLogin} 
+          onAdmin={handleLogin}
           lang={lang} 
           setLang={setLang} 
           t={t} 
@@ -213,7 +226,29 @@ export default function App() {
         />
       )}
 
-      {screen === 'HOME' && (
+      {authError && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
+          <div className="bg-brand-dark border-2 border-brand-lime/30 p-8 rounded-[2rem] max-w-md w-full shadow-2xl animate-in zoom-in duration-300">
+            <div className="w-16 h-16 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mb-6 mx-auto">
+              <span className="text-3xl font-black">!</span>
+            </div>
+            <h2 className="text-2xl font-black text-center mb-4 text-white uppercase italic tracking-tighter leading-none">
+              {authError.title}
+            </h2>
+            <p className="text-white/70 text-sm text-center mb-8 leading-relaxed">
+              {authError.message}
+            </p>
+            <button 
+              onClick={() => setAuthError(null)} 
+              className="w-full bg-brand-lime text-brand-dark py-4 rounded-2xl font-black uppercase tracking-widest shadow-lg active:scale-95 transition-transform"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {screen === 'HOME' && user && (
         <HomePage 
           onSelectMode={(m) => { setMode(m); setScreen('CONFIG'); }}
           onJoinDuel={() => setScreen('JOIN_ROOM')}
@@ -224,13 +259,13 @@ export default function App() {
           onLogout={() => signOut(auth).then(() => setScreen('LANDING'))}
           t={t}
           audio={audio}
-          isGuest={user?.isAnonymous}
-          demoUsed={demoUsed}
+          isGuest={false}
+          demoUsed={false}
           isAdmin={isAdmin}
         />
       )}
 
-      {screen === 'CONFIG' && (
+      {screen === 'CONFIG' && user && (
         <ConfigPage 
           settings={settings} 
           setSettings={setSettings} 
@@ -258,10 +293,6 @@ export default function App() {
         <ReadyPage 
           quiz={quiz} 
           onStart={() => {
-            if (user?.isAnonymous && !isAdmin) {
-              setDemoUsed(true);
-              localStorage.setItem('sqg_demo_used', 'true');
-            }
             audio.enableAudio();
             setScreen('ARENA');
           }}
