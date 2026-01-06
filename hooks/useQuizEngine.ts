@@ -112,18 +112,24 @@ export function useQuizEngine(
         advance();
       } else if (currentQuestion.type === 'FITB') {
         if (fitbMode === 'INPUT') {
+          // Switch to MCQ mode for the second attempt
           setFitbMode('MCQ');
           setCurrentAttempts(1);
-          // Ensure options exist for the second attempt
-          const opts = [...(currentQuestion.options || [])];
-          if (opts.length < 4) {
-            // Fallback distractors if AI provided too few
-            const distractors = ["Answer A", "Answer B", "Answer C", "Answer D"].filter(d => d.toLowerCase() !== currentQuestion.correctAnswer.toLowerCase());
-            while(opts.length < 3) opts.push(distractors.pop() || "Option");
-            if (!opts.some(o => o.toLowerCase() === currentQuestion.correctAnswer.toLowerCase())) {
-              opts.push(currentQuestion.correctAnswer);
-            }
+          
+          // Prepare options for the multiple-choice attempt
+          let opts = Array.isArray(currentQuestion.options) ? [...currentQuestion.options] : [];
+          
+          // Ensure correct answer is in the options
+          if (!opts.some(o => o.toLowerCase() === currentQuestion.correctAnswer.toLowerCase())) {
+            opts.push(currentQuestion.correctAnswer);
           }
+          
+          // Fill with fallbacks if for some reason the options are empty or too few
+          if (opts.length < 2) {
+            const distractors = ["Wait", "Maybe", "Possibly", "Unknown"].filter(d => d.toLowerCase() !== currentQuestion.correctAnswer.toLowerCase());
+            while(opts.length < 4) opts.push(distractors.pop() || "Choice");
+          }
+          
           setFitbOptions(opts.sort(() => Math.random() - 0.5));
         } else {
           logFail();

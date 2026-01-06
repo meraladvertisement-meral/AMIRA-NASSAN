@@ -1,14 +1,11 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { QuizSettings, Question, QuestionType } from "../types/quiz";
+import { QuizSettings, Question } from "../types/quiz";
 
 export class GeminiService {
   private static instance: GeminiService;
-  private ai: GoogleGenAI;
 
-  private constructor() {
-    this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-  }
+  private constructor() {}
 
   public static getInstance(): GeminiService {
     if (!GeminiService.instance) {
@@ -20,7 +17,7 @@ export class GeminiService {
   private async compressImage(base64: string): Promise<string> {
     return new Promise((resolve) => {
       const img = new Image();
-      img.src = base64;
+      img.src = base64.startsWith('data:') ? base64 : `data:image/jpeg;base64,${base64}`;
       img.onload = () => {
         const canvas = document.createElement('canvas');
         const MAX_WIDTH = 1024;
@@ -34,8 +31,9 @@ export class GeminiService {
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.7).split(',')[1]);
+        resolve(canvas.toDataURL('image/jpeg', 0.6).split(',')[1]);
       };
+      img.onerror = () => resolve(base64.split(',')[1] || base64);
     });
   }
 
@@ -43,33 +41,44 @@ export class GeminiService {
     content: string, 
     settings: QuizSettings, 
     isImage: boolean = false, 
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    lang: string = "en"
   ): Promise<{ questions: Question[], language: string }> {
-    if (!process.env.API_KEY) return this.mockQuiz(settings);
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+    const modelName = "gemini-3-flash-preview";
+    
+    const prompt = `Task: Create a high-quality educational quiz from the provided data.
+    Strict Rules:
+    - Language: ${lang === 'de' ? 'German' : 'English'}
+    - Difficulty: ${settings.difficulty}
+    - Count: ${settings.questionCount}
+    - Types: ${settings.types.join(", ")}
+    - Output MUST be valid JSON.
+    - Each MCQ must have 4 unique options.
+    - Each TF must have ["True", "False"] options.
+    - For FITB (Fill in the blanks), the correctAnswer is the word to fill. IMPORTANT: Also provide 3 plausible distractors (incorrect but related words) in the 'options' field so that we can offer a multiple-choice retry if the user fails the first time.
+    - Add a concise explanation for each correct answer.`;
 
     try {
-      let parts: any[] = [];
-      const prompt = `Generate a compact JSON quiz from this content. 
-      Settings: Difficulty: ${settings.difficulty}, Count: ${settings.questionCount}, Types: ${settings.types.join(",")}.
-      Detect language and use it for questions.
-      CRITICAL: Return ONLY valid JSON. 
-      For FITB questions, the 'options' field MUST contain the correct answer plus 3 plausible distractors (total 4).`;
+      let parts: any[] = [{ text: prompt }];
 
       if (isImage) {
-        const compressed = await this.compressImage(content);
-        parts = [
-          { text: prompt },
-          { inlineData: { mimeType: "image/jpeg", data: compressed } }
-        ];
+        const base64Data = await this.compressImage(content);
+        parts.push({
+          inlineData: {
+            mimeType: "image/jpeg",
+            data: base64Data
+          }
+        });
       } else {
-        parts = [{ text: `${prompt}\n\nContent: "${content.substring(0, 6000)}"` }];
+        parts.push({ text: `Source Content:\n${content.substring(0, 20000)}` });
       }
 
-      const generationPromise = this.ai.models.generateContent({
-        // Updated to gemini-flash-lite-latest for ultra-fast low-latency responses
-        model: "gemini-flash-lite-latest",
-        contents: { parts },
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents: [{ role: "user", parts }],
         config: {
+          temperature: 0.1,
           responseMimeType: "application/json",
           responseSchema: {
             type: Type.OBJECT,
@@ -85,9 +94,9 @@ export class GeminiService {
                     prompt: { type: Type.STRING },
                     options: { type: Type.ARRAY, items: { type: Type.STRING } },
                     correctAnswer: { type: Type.STRING },
-                    explanation: { type: Type.STRING },
+                    explanation: { type: Type.STRING }
                   },
-                  required: ["id", "type", "prompt", "correctAnswer", "options"]
+                  required: ["id", "type", "prompt", "options", "correctAnswer"]
                 }
               }
             },
@@ -96,38 +105,18 @@ export class GeminiService {
         }
       });
 
-      const timeoutPromise = new Promise((_, reject) => {
-        const timer = setTimeout(() => reject(new Error("TIMEOUT")), 45000);
-        signal?.addEventListener('abort', () => {
-          clearTimeout(timer);
-          reject(new Error("ABORTED"));
-        });
-      });
+      const resultText = response.text;
+      if (!resultText) throw new Error("EMPTY_AI_RESPONSE");
 
-      const response = await Promise.race([generationPromise, timeoutPromise]) as any;
-      
-      if (!response.text) throw new Error("INVALID_RESPONSE");
-      
-      return JSON.parse(response.text);
+      const parsedData = JSON.parse(resultText.trim());
+      if (!parsedData.questions || parsedData.questions.length === 0) {
+        throw new Error("QUIZ_EMPTY");
+      }
+
+      return parsedData;
     } catch (error: any) {
-      if (error.message === 'ABORTED') throw error;
-      console.error("Gemini failed", error);
+      console.error("AI Gen Failed:", error);
       throw error;
     }
-  }
-
-  private mockQuiz(settings: QuizSettings): { questions: Question[], language: string } {
-    const questions: Question[] = Array.from({ length: settings.questionCount }).map((_, i) => {
-      const type = settings.types[i % settings.types.length];
-      return {
-        id: `q-${i}`,
-        type,
-        prompt: `Mock Question ${i + 1} (${type}) - Is the sky blue?`,
-        options: type === 'FITB' ? ["Blue", "Red", "Green", "Yellow"] : (type === 'MCQ' ? ["Yes", "No", "Maybe", "Sometimes"] : ["True", "False"]),
-        correctAnswer: type === 'FITB' ? "Blue" : (type === 'MCQ' ? "Yes" : "True"),
-        explanation: "Correct!"
-      };
-    });
-    return { questions, language: "en" };
   }
 }

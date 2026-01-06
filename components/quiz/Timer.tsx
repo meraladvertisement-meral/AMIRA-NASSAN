@@ -10,55 +10,80 @@ interface TimerProps {
 export const Timer: React.FC<TimerProps> = ({ timeLeft, totalTime, className = "" }) => {
   const ratio = timeLeft / totalTime;
   
-  // Color mapping based on urgency
-  const getColorClass = () => {
-    if (ratio > 0.5) return 'bg-brand-lime shadow-[0_0_15px_#84cc16]';
-    if (ratio > 0.2) return 'bg-brand-gold shadow-[0_0_15px_#f59e0b]';
-    return 'bg-red-500 shadow-[0_0_15px_#ef4444] animate-pulse';
+  // Dynamic color selection based on urgency
+  const getColorClasses = () => {
+    if (ratio > 0.5) return {
+      bar: 'bg-brand-lime shadow-[0_0_20px_rgba(132,204,22,0.6)]',
+      text: 'text-brand-lime',
+      glow: 'bg-brand-lime/10'
+    };
+    if (ratio > 0.25) return {
+      bar: 'bg-brand-gold shadow-[0_0_20px_rgba(245,158,11,0.6)]',
+      text: 'text-brand-gold',
+      glow: 'bg-brand-gold/10'
+    };
+    return {
+      bar: 'bg-red-500 shadow-[0_0_20px_rgba(239,68,68,0.8)] animate-pulse',
+      text: 'text-red-500 animate-pulse',
+      glow: 'bg-red-500/20'
+    };
   };
 
-  const getTextColorClass = () => {
-    if (ratio > 0.5) return 'text-brand-lime';
-    if (ratio > 0.2) return 'text-brand-gold';
-    return 'text-red-500 animate-pulse';
-  };
+  const colors = getColorClasses();
 
   return (
-    <div className={`w-full flex flex-col gap-2 ${className}`}>
-      <div className="flex justify-between items-end px-1">
+    <div className={`w-full flex flex-col gap-2.5 ${className}`}>
+      {/* Timer Labels & Countdown */}
+      <div className="flex justify-between items-end px-1.5">
         <div className="flex flex-col">
-          <span className="text-[9px] font-black uppercase text-white/30 tracking-[0.2em]">Time Remaining</span>
-          <div className="flex items-baseline gap-1">
-             <span className={`text-2xl font-black italic leading-none transition-colors duration-500 ${getTextColorClass()}`}>
+          <span className="text-[10px] font-black uppercase text-white/40 tracking-[0.25em] leading-none mb-1.5">
+            Quest Timer
+          </span>
+          <div className="flex items-baseline gap-1.5">
+             <span className={`text-3xl font-black italic leading-none transition-colors duration-500 tabular-nums ${colors.text}`}>
                {timeLeft}
              </span>
-             <span className="text-[10px] font-bold text-white/20 uppercase tracking-tighter">sec</span>
+             <span className="text-[11px] font-bold text-white/30 uppercase tracking-tighter">seconds</span>
           </div>
         </div>
         
+        {/* Urgent Warning */}
         {timeLeft <= 5 && (
-          <span className="text-[10px] font-black text-red-500 uppercase tracking-widest animate-bounce">
-            Hurry Up! ⚡
-          </span>
+          <div className="flex flex-col items-end">
+            <span className="text-[10px] font-black text-red-500 uppercase tracking-widest animate-bounce">
+              Time is running out! ⚡
+            </span>
+          </div>
         )}
       </div>
 
-      <div className="relative w-full h-2.5 bg-white/5 rounded-full overflow-hidden border border-white/5 shadow-inner">
-        {/* Track Glow Background */}
-        <div className="absolute inset-0 opacity-10" style={{ backgroundColor: ratio > 0.5 ? '#84cc16' : ratio > 0.2 ? '#f59e0b' : '#ef4444' }}></div>
+      {/* Progress Bar Track */}
+      <div className="relative w-full h-3.5 bg-black/40 rounded-full overflow-hidden border border-white/10 shadow-inner backdrop-blur-sm">
+        {/* Dynamic Background Glow */}
+        <div className={`absolute inset-0 transition-colors duration-500 ${colors.glow}`}></div>
         
-        {/* Progress Fill */}
+        {/* Smooth Progress Fill */}
         <div 
-          className={`h-full rounded-full transition-all duration-1000 linear ${getColorClass()}`}
+          className={`h-full rounded-full transition-all duration-1000 linear relative flex items-center justify-end ${colors.bar}`}
           style={{ width: `${ratio * 100}%` }}
         >
-          {/* Internal Shine */}
-          <div className="absolute inset-0 bg-white/20 h-1/2 rounded-full m-0.5 blur-[0.5px]"></div>
+          {/* Internal Glass Highlight */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent h-1/2 rounded-full m-0.5"></div>
           
-          {/* Leading Light Edge */}
-          <div className="absolute right-0 top-0 bottom-0 w-4 bg-white/40 blur-md rounded-full translate-x-1/2"></div>
+          {/* Animated Scanning Light */}
+          <div className="absolute inset-0 w-20 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-[timer-shine_3s_infinite_linear]"></div>
+          
+          {/* Leading Cap Glow */}
+          <div className="w-4 h-full bg-white/40 blur-sm rounded-full translate-x-1/2"></div>
         </div>
       </div>
+
+      <style>{`
+        @keyframes timer-shine {
+          0% { transform: translateX(-200%) skewX(-12deg); }
+          100% { transform: translateX(400%) skewX(-12deg); }
+        }
+      `}</style>
     </div>
   );
 };

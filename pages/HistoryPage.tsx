@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { GlassCard } from '../components/layout/GlassCard';
 import { ThreeDButton } from '../components/layout/ThreeDButton';
@@ -14,25 +15,32 @@ interface HistoryPageProps {
 const HistoryPage: React.FC<HistoryPageProps> = ({ onSelectQuiz, onBack, t }) => {
   const [history, setHistory] = useState<QuizRecord[]>([]);
 
-  useEffect(() => {
+  const refreshHistory = () => {
     setHistory(historyService.getHistory());
+  };
+
+  useEffect(() => {
+    refreshHistory();
   }, []);
 
   const handleClear = () => {
-    historyService.clearHistory();
-    setHistory([]);
+    if (confirm(t.clearHistory + '?')) {
+      historyService.clearHistory();
+      setHistory([]);
+    }
   };
 
   const deleteRecord = (id: string, e: React.MouseEvent) => {
+    // CRITICAL: Stop the event from reaching the GlassCard's onClick
     e.stopPropagation();
-    historyService.deleteRecord(id);
-    setHistory(historyService.getHistory());
+    e.preventDefault();
+    
+    if (confirm(t.appName === 'SnapQuizGame' ? 'Delete this quiz?' : 'Dieses Quiz löschen?')) {
+      historyService.deleteRecord(id);
+      refreshHistory();
+    }
   };
 
-  /**
-   * Fixed: Correctly handle PDF download by opening the stored URL or generating a new one if missing.
-   * Storing ONLY strings (URLs) in state/history as required.
-   */
   const handlePdfAction = async (record: QuizRecord, action: 'generate' | 'download' | 'delete', e: React.MouseEvent) => {
     e.stopPropagation();
     
@@ -41,72 +49,80 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ onSelectQuiz, onBack, t }) =>
         const blob = await pdfService.generateExamPdf(record);
         const url = URL.createObjectURL(blob);
         historyService.updateRecord(record.id, { pdfGenerated: true, pdfUrl: url });
-        setHistory(historyService.getHistory());
+        refreshHistory();
       } catch (err) {
         console.error("PDF generation failed", err);
-        alert("Failed to generate PDF.");
       }
     } else if (action === 'download') {
-      try {
-        let downloadUrl = record.pdfUrl;
-        
-        // If the URL is missing or likely expired (blob urls only last for current session), regenerate.
-        // Note: The prompt says "NOT regenerate", but blob URLs die on reload. 
-        // We prioritize opening the stored one if valid.
-        if (!downloadUrl) {
+      let downloadUrl = record.pdfUrl;
+      if (!downloadUrl) {
+        try {
           const blob = await pdfService.generateExamPdf(record);
           downloadUrl = URL.createObjectURL(blob);
           historyService.updateRecord(record.id, { pdfUrl: downloadUrl });
-        }
-
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = `Exam-${record.id}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } catch (err) {
-        console.error("PDF download failed", err);
-        alert("Failed to download PDF.");
+        } catch (err) { return; }
       }
+      const link = document.createElement('a');
+      link.href = downloadUrl!;
+      link.download = `SnapQuiz-${record.id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } else if (action === 'delete') {
       historyService.updateRecord(record.id, { pdfGenerated: false, pdfUrl: undefined });
-      setHistory(historyService.getHistory());
+      refreshHistory();
     }
   };
 
   return (
-    <div className="p-6 max-w-lg mx-auto min-h-screen flex flex-col gap-6">
+    <div className="p-6 max-w-lg mx-auto min-h-screen flex flex-col gap-6 animate-in fade-in duration-500">
       <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-black italic">SnapQuizGame {t.history}</h2>
-        <button onClick={onBack} className="glass px-4 py-2 rounded-xl text-sm font-bold">←</button>
+        <h2 className="text-3xl font-black italic tracking-tighter">SnapQuiz {t.history}</h2>
+        <button onClick={onBack} className="glass w-12 h-12 flex items-center justify-center rounded-2xl text-xl active:scale-90 transition shadow-lg">←</button>
       </div>
 
       {history.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center text-white/30 font-bold uppercase italic">
-          {t.noHistory}
+        <div className="flex-1 flex flex-col items-center justify-center text-white/20 gap-4">
+          <span className="text-6xl">📁</span>
+          <p className="font-black uppercase tracking-[0.3em] text-xs">{t.noHistory}</p>
         </div>
       ) : (
         <div className="space-y-4">
           {history.map(record => (
             <GlassCard 
               key={record.id} 
-              className="relative cursor-pointer hover:bg-white/20 transition active:scale-95"
+              className="relative cursor-pointer hover:bg-white/20 transition-all active:scale-[0.98] border-white/10"
               onClick={() => onSelectQuiz(record)}
             >
+              {/* Deletion Button - Higher Z-Index and clear hit area */}
+              <button 
+                type="button"
+                onClick={(e) => deleteRecord(record.id, e)}
+                className="absolute top-2 right-2 w-10 h-10 flex items-center justify-center rounded-full bg-black/20 text-white/40 hover:bg-red-500 hover:text-white transition-all z-50 pointer-events-auto shadow-sm"
+                title="Delete Record"
+              >
+                <span className="text-lg font-bold">✕</span>
+              </button>
+
               <div className="pr-12">
-                <p className="text-xs font-bold text-brand-lime uppercase mb-1">
-                  {new Date(record.createdAt).toLocaleDateString()} • {record.settings.difficulty}
-                </p>
-                <p className="font-bold line-clamp-1">
-                  {record.questions[0]?.prompt.substring(0, 50)}...
+                <div className="flex items-center gap-2 mb-2">
+                   <span className="text-[10px] font-black text-brand-lime bg-brand-lime/10 px-2 py-0.5 rounded uppercase">
+                     {record.settings.difficulty}
+                   </span>
+                   <span className="text-[10px] font-bold text-white/40">
+                     {new Date(record.createdAt).toLocaleDateString()}
+                   </span>
+                </div>
+                
+                <p className="font-bold line-clamp-2 text-sm leading-relaxed mb-4">
+                  {record.questions[0]?.prompt || "Quiz Content"}
                 </p>
                 
-                <div className="flex gap-2 mt-4">
+                <div className="flex flex-wrap gap-2">
                   {!record.pdfGenerated ? (
                     <button 
                       onClick={(e) => handlePdfAction(record, 'generate', e)}
-                      className="text-[10px] bg-white/10 px-2 py-1 rounded uppercase font-bold"
+                      className="text-[9px] bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg uppercase font-black transition"
                     >
                       📄 {t.generatePdf}
                     </button>
@@ -114,30 +130,24 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ onSelectQuiz, onBack, t }) =>
                     <>
                       <button 
                         onClick={(e) => handlePdfAction(record, 'download', e)}
-                        className="text-[10px] bg-brand-lime text-brand-dark px-2 py-1 rounded uppercase font-bold"
+                        className="text-[9px] bg-brand-lime text-brand-dark px-3 py-1.5 rounded-lg uppercase font-black transition shadow-lg"
                       >
                         📥 {t.downloadPdf}
                       </button>
                       <button 
                         onClick={(e) => handlePdfAction(record, 'delete', e)}
-                        className="text-[10px] bg-red-500/20 px-2 py-1 rounded uppercase font-bold"
+                        className="text-[9px] bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg uppercase font-black transition"
                       >
-                        🗑️ {t.deletePdf}
+                        🗑️
                       </button>
                     </>
                   )}
                 </div>
               </div>
-              <button 
-                onClick={(e) => deleteRecord(record.id, e)}
-                className="absolute top-4 right-4 text-white/30 hover:text-red-400 p-2"
-              >
-                ✕
-              </button>
             </GlassCard>
           ))}
           
-          <ThreeDButton variant="danger" className="w-full mt-4" onClick={handleClear}>
+          <ThreeDButton variant="danger" className="w-full mt-6 py-4" onClick={handleClear}>
             {t.clearHistory}
           </ThreeDButton>
         </div>

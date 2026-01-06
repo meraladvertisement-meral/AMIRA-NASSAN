@@ -33,9 +33,8 @@ import DuelLobbyPage from './pages/DuelLobbyPage';
 import DuelJoinPage from './pages/DuelJoinPage';
 import TeacherLobbyPage from './pages/TeacherLobbyPage';
 
-// Admin Security
-const AUTHORIZED_ADMIN_EMAIL = "meral.advertisement@gmail.com";
-const ADMIN_SECURITY_CODE = "SNAP-ADMIN-2026";
+// Admin Security Whitelist
+const ADMIN_EMAILS = ["meral.advertisement@gmail.com"];
 
 export default function App() {
   const [screen, setScreen] = useState<AppScreen>('LANDING');
@@ -62,6 +61,26 @@ export default function App() {
   const t = useMemo(() => translations[lang], [lang]);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // Handle Deep Linking / Query Parameters
+  useEffect(() => {
+    const handleNavigation = () => {
+      const params = new URLSearchParams(window.location.search);
+      const join = params.get('join') || params.get('joinRoom') || params.get('code');
+      const modeParam = params.get('mode');
+
+      if (join && screen !== 'ARENA' && screen !== 'RESULT') {
+        setRoomCode(join.toUpperCase());
+        if (modeParam === 'teacher') setMode(GameMode.TEACHER);
+        else setMode(GameMode.DUEL);
+        setScreen('JOIN_ROOM');
+      }
+    };
+
+    handleNavigation();
+    window.addEventListener('popstate', handleNavigation);
+    return () => window.removeEventListener('popstate', handleNavigation);
+  }, [screen]);
+
   useEffect(() => {
     localStorage.setItem('sqg_ui_lang', lang);
   }, [lang]);
@@ -70,7 +89,19 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setIsAuthLoading(false);
-      if (u && screen === 'LANDING') setScreen('HOME');
+      
+      const email = u?.email?.toLowerCase();
+      if (email && ADMIN_EMAILS.includes(email)) {
+        setIsAdmin(true);
+        localStorage.setItem('snapquiz_admin', '1');
+      } else {
+        setIsAdmin(false);
+        localStorage.removeItem('snapquiz_admin');
+      }
+
+      if (u && screen === 'LANDING' && !window.location.search.includes('join')) {
+        setScreen('HOME');
+      }
       if (!u) signInAnonymously(auth).catch(console.error);
     });
     return () => unsubscribe();
@@ -79,28 +110,30 @@ export default function App() {
   const handleAdminTrigger = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      if (result.user.email?.toLowerCase() !== AUTHORIZED_ADMIN_EMAIL) {
-        await signOut(auth);
-        alert("Unauthorized account.");
-        return;
-      }
-      const code = prompt("Enter master code:");
-      if (code === ADMIN_SECURITY_CODE) {
+      const userEmail = result.user.email?.toLowerCase();
+
+      if (userEmail && ADMIN_EMAILS.includes(userEmail)) {
         setIsAdmin(true);
         localStorage.setItem('snapquiz_admin', '1');
         setScreen('HOME');
+      } else {
+        await signOut(auth);
+        setIsAdmin(false);
+        localStorage.removeItem('snapquiz_admin');
+        alert("ACCESS DENIED");
       }
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      console.error("Admin Auth Error:", e);
+      if (e.code !== 'auth/popup-closed-by-user') {
+        alert("Authentication failed: " + e.message);
+      }
     }
   };
 
   const handleStartQuiz = async (content: string, isImage: boolean = false) => {
-    if (!isAdmin && user?.isAnonymous) {
-      if (demoUsed) {
-        alert(t.demoUsed);
-        return;
-      }
+    if (!isAdmin && user?.isAnonymous && demoUsed) {
+      alert(t.demoUsed);
+      return;
     }
 
     setScreen('LOADING');
@@ -112,7 +145,8 @@ export default function App() {
         content, 
         settings, 
         isImage, 
-        abortControllerRef.current.signal
+        abortControllerRef.current.signal,
+        lang
       );
       
       const newQuiz: QuizRecord = {
@@ -129,7 +163,7 @@ export default function App() {
       if (mode === GameMode.DUEL) {
         const code = Math.random().toString(36).substr(2, 6).toUpperCase();
         setRoomCode(code);
-        await firebaseService.createRoom(code, 'duel', 'host-peer-id'); // PeerID is dummy for state check
+        await firebaseService.createRoom(code, 'duel', 'host-peer-id'); 
         setScreen('ROOM_LOBBY');
       } else if (mode === GameMode.TEACHER) {
         const code = Math.random().toString(36).substr(2, 6).toUpperCase();
@@ -141,7 +175,12 @@ export default function App() {
       }
     } catch (err: any) {
       if (err.message === 'ABORTED') return;
-      setLoadingError(err.message === 'TIMEOUT' ? t.generationTimeout : t.generationError);
+      console.error("Generation error details:", err);
+      let msg = t.generationError;
+      if (err.message === 'INVALID_API_KEY') msg = "Invalid API Key. Check Google AI Studio settings.";
+      else if (err.message === 'EMPTY_RESPONSE') msg = "AI returned an empty response. Try different content.";
+      
+      setLoadingError(msg);
     }
   };
 
@@ -207,7 +246,10 @@ export default function App() {
           t={t} 
           error={loadingError} 
           onCancel={() => { abortControllerRef.current?.abort(); setScreen('CONFIG'); }} 
-          onRetry={() => handleStartQuiz(localStorage.getItem('sqg_draft_content') || '')}
+          onRetry={() => {
+            const draft = localStorage.getItem('sqg_draft_content') || '';
+            handleStartQuiz(draft, draft.startsWith('data:image'));
+          }}
           onBack={() => setScreen('HOME')}
         />
       )}
@@ -260,6 +302,7 @@ export default function App() {
       {screen === 'ARENA' && quiz && (
         <QuizPage 
           quiz={quiz} 
+          mode={mode}
           onComplete={(res) => {
             setResult(res);
             historyService.saveQuiz(quiz);

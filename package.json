@@ -13,7 +13,8 @@
     "react": "^19.2.3",
     "@google/genai": "^1.34.0",
     "peerjs": "^1.5.5",
-    "jspdf": "^4.0.0"
+    "jspdf": "^4.0.0",
+    "node-fetch": "^3.3.2"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
