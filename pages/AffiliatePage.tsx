@@ -47,7 +47,7 @@ const AffiliatePage: React.FC<AffiliatePageProps> = ({ onBack, t, lang }) => {
         </GlassCard>
         <GlassCard className="text-center p-4">
           <p className="text-xs uppercase font-bold text-white/50">Earnings</p>
-          <p className="text-2xl font-black text-brand-lime">€36.00</p>
+          <p className="text-2xl font-black text-brand-lime">$36.00</p>
         </GlassCard>
       </div>
 

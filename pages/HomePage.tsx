@@ -34,138 +34,113 @@ const HomePage: React.FC<HomePageProps> = ({
   isAdmin
 }) => {
   return (
-    <div className="p-6 max-w-lg mx-auto min-h-screen flex flex-col justify-center gap-6">
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full border-2 border-white shadow-lg overflow-hidden bg-white flex items-center justify-center p-1">
-            <svg viewBox="0 0 100 100" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-              <rect x="20" y="40" width="60" height="40" rx="8" fill="#1e3a8a" />
-              <rect x="35" y="32" width="30" height="12" rx="4" fill="#1e3a8a" />
-              <circle cx="50" cy="60" r="18" fill="white" />
-              <circle cx="50" cy="60" r="14" fill="#f59e0b" />
-              <path d="M50 15 L20 30 L50 45 L80 30 Z" fill="#6b21a8" />
-            </svg>
+    <div className="min-h-screen flex flex-col relative">
+      {/* Sticky Header */}
+      <header className="sticky top-0 z-50 w-full bg-brand-dark/40 backdrop-blur-xl border-b border-white/10 px-6 py-4 flex justify-between items-center shadow-lg">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-brand-lime rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(132,204,22,0.4)]">
+            <span className="text-brand-dark font-black text-xs">SQ</span>
           </div>
-          <div>
-            <h1 className="text-2xl font-black italic text-white drop-shadow-md tracking-tighter">SnapQuizGame</h1>
-            {isAdmin && <p className="text-[10px] text-brand-lime font-black uppercase tracking-widest">Admin Mode Active</p>}
-          </div>
+          <h1 className="text-xl font-black italic text-white tracking-tighter drop-shadow-sm">SnapQuizGame</h1>
         </div>
-        <div className="flex gap-2">
-          {(isGuest || isAdmin) && (
-            <button 
-              onClick={onLogout}
-              className="glass p-3 rounded-2xl text-xs font-bold shadow-lg active:scale-90 transition-transform"
-            >
-              Sign In
-            </button>
-          )}
+        
+        <div className="flex items-center gap-3">
           <button 
             onClick={() => audio.toggleMute()}
-            className="glass p-3 rounded-2xl text-2xl shadow-lg active:scale-90 transition-transform"
+            className={`w-11 h-11 flex items-center justify-center rounded-2xl transition-all duration-300 active:scale-90 shadow-lg ${
+              audio.isMuted 
+                ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
+                : 'bg-brand-lime/20 text-brand-lime border border-brand-lime/30'
+            }`}
+            aria-label={audio.isMuted ? "Unmute sounds" : "Mute sounds"}
           >
-            {audio.isMuted ? '🔇' : '🔊'}
+            <span className="text-xl leading-none">{audio.isMuted ? '🔇' : '🔊'}</span>
           </button>
-        </div>
-      </div>
-
-      {isGuest && demoUsed && !isAdmin && (
-        <GlassCard className="bg-brand-gold/30 border-brand-gold/60 text-center animate-bounce-short z-20">
-          <p className="font-bold text-white mb-2 text-lg">⚠️ {t.demoUsed}</p>
-          <p className="text-sm opacity-90 leading-relaxed">{t.guestBlocker}</p>
+          
           <button 
-            onClick={onLogout}
-            className="mt-6 px-8 py-3 bg-brand-lime text-brand-dark rounded-2xl text-sm font-black shadow-xl uppercase tracking-widest active:scale-95 transition-all hover:brightness-110"
+            onClick={onLogout} 
+            className="glass px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/20 transition-all border-white/20 active:scale-95"
           >
-            {t.continueGoogle}
+            {t.logout || 'Logout'}
           </button>
+        </div>
+      </header>
+
+      {/* Content */}
+      <main className="p-6 max-w-lg mx-auto w-full flex-1 flex flex-col justify-center gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <GlassCard className="space-y-4 shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-white/20">
+          <ThreeDButton 
+            variant="primary" 
+            className="w-full flex items-center justify-between py-6 group" 
+            onClick={() => onSelectMode(GameMode.SOLO)}
+          >
+            <span className="text-xl font-black">{t.solo}</span>
+            <span className="text-3xl group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform">🚀</span>
+          </ThreeDButton>
+
+          <div className="grid grid-cols-2 gap-4">
+            <ThreeDButton variant="secondary" className="py-5 flex flex-col items-center gap-1" onClick={() => onSelectMode(GameMode.DUEL)}>
+              <span className="text-xs opacity-50 font-black">1 VS 1</span>
+              <span>{t.duel} ⚔️</span>
+            </ThreeDButton>
+            <ThreeDButton variant="secondary" className="py-5 flex flex-col items-center gap-1" onClick={() => onSelectMode(GameMode.TEACHER)}>
+              <span className="text-xs opacity-50 font-black">CLASS</span>
+              <span>{t.teacher} 👩‍🏫</span>
+            </ThreeDButton>
+          </div>
+
+          <ThreeDButton variant="warning" className="w-full py-5 bg-white/5 border-white/10 hover:bg-white/10" onClick={onJoinDuel}>
+            <span className="flex items-center justify-center gap-2">
+              {t.joinRoom} <span className="text-xl">🔑</span>
+            </span>
+          </ThreeDButton>
         </GlassCard>
-      )}
 
-      <GlassCard className="space-y-4 shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-white/20">
-        <ThreeDButton 
-          variant="primary" 
-          className={`w-full flex items-center justify-between py-5 ${(isGuest && demoUsed && !isAdmin) ? 'opacity-40 grayscale cursor-not-allowed' : ''}`} 
-          onClick={() => ((isGuest && demoUsed && !isAdmin) ? null : onSelectMode(GameMode.SOLO))}
-          disabled={isGuest && demoUsed && !isAdmin}
-        >
-          <span className="text-xl">{isGuest ? t.tryDemo : t.solo}</span>
-          <span className="text-3xl">🚀</span>
-        </ThreeDButton>
-
-        <div className="grid grid-cols-2 gap-2">
-          <ThreeDButton 
-            variant="secondary" 
-            className={`flex-1 flex flex-col items-center justify-center py-4 ${isGuest && !isAdmin ? 'opacity-25 pointer-events-none' : ''}`} 
-            onClick={() => onSelectMode(GameMode.DUEL)}
-            disabled={isGuest && !isAdmin}
+        <div className="grid grid-cols-2 gap-4">
+          <button 
+            onClick={onHistory} 
+            className="glass group p-5 rounded-[2rem] flex flex-col items-center gap-2 hover:bg-white/20 transition-all active:scale-95 border-white/10"
           >
-            <span className="text-xs font-black uppercase mb-1">{t.createRoom}</span>
-            <span className="text-2xl">⚔️</span>
-          </ThreeDButton>
-          <ThreeDButton 
-            variant="secondary" 
-            className={`flex-1 flex flex-col items-center justify-center py-4 bg-white/5 ${isGuest && !isAdmin ? 'opacity-25 pointer-events-none' : ''}`} 
-            onClick={onJoinDuel}
-            disabled={isGuest && !isAdmin}
+            <span className="text-2xl group-hover:scale-110 transition-transform">📁</span>
+            <span className="text-[10px] font-black uppercase tracking-widest opacity-70">{t.history}</span>
+          </button>
+          
+          <button 
+            onClick={onPricing} 
+            className="glass group p-5 rounded-[2rem] flex flex-col items-center gap-2 hover:bg-white/20 transition-all active:scale-95 border-white/10"
           >
-            <span className="text-xs font-black uppercase mb-1">{t.joinRoom}</span>
-            <span className="text-2xl">🤝</span>
-          </ThreeDButton>
+            <span className="text-2xl group-hover:scale-110 transition-transform">💎</span>
+            <span className="text-[10px] font-black uppercase tracking-widest opacity-70">{t.pricing}</span>
+          </button>
+        </div>
+        
+        <div className="flex flex-col items-center gap-5 mt-4">
+          <button 
+            onClick={onAffiliate} 
+            className="text-white/60 text-[10px] font-black uppercase tracking-[0.2em] hover:text-brand-lime transition-colors"
+          >
+            ✨ {t.affiliate}
+          </button>
+          <button 
+            onClick={onInfoCenter} 
+            className="text-white/30 text-[9px] font-black uppercase tracking-[0.4em] hover:text-white transition-colors"
+          >
+            {t.contact}
+          </button>
         </div>
 
-        <ThreeDButton 
-          variant="warning" 
-          className={`w-full flex items-center justify-between py-5 ${isGuest && !isAdmin ? 'opacity-25 pointer-events-none' : ''}`} 
-          onClick={() => onSelectMode(GameMode.TEACHER)}
-          disabled={isGuest && !isAdmin}
-        >
-          <div className="flex items-center gap-2">
-            <span className="text-xl">{t.teacher}</span>
-            {(isGuest && !isAdmin) && <span className="text-xs bg-black/40 px-2 py-0.5 rounded-full">🔒</span>}
+        {isGuest && !isAdmin && (
+          <div className="mt-6 p-5 bg-brand-gold/10 border border-brand-gold/20 rounded-[2rem] text-center backdrop-blur-sm animate-pulse">
+            <p className="text-[9px] font-black text-brand-gold uppercase tracking-[0.3em] mb-1.5">{t.appName} Demo</p>
+            <p className="text-[11px] font-medium text-white/70 leading-relaxed">
+              {demoUsed ? t.demoUsed : t.guestBlocker}
+            </p>
           </div>
-          <span className="text-3xl">👩‍🏫</span>
-        </ThreeDButton>
-      </GlassCard>
+        )}
+      </main>
 
-      <div className="grid grid-cols-2 gap-4">
-        <ThreeDButton 
-          variant="secondary" 
-          className={`text-sm py-4 bg-white/5 border-white/10 ${isGuest && !isAdmin ? 'opacity-25 pointer-events-none' : ''}`} 
-          onClick={onHistory}
-          disabled={isGuest && !isAdmin}
-        >
-          📁 {t.history} {(isGuest && !isAdmin) && "🔒"}
-        </ThreeDButton>
-        <ThreeDButton 
-          variant="secondary" 
-          className={`text-sm py-4 bg-white/5 border-white/10 ${isGuest && !isAdmin ? 'opacity-25 pointer-events-none' : ''}`} 
-          onClick={onPricing}
-          disabled={isGuest && !isAdmin}
-        >
-          💎 {t.pricing} {(isGuest && !isAdmin) && "🔒"}
-        </ThreeDButton>
-      </div>
-      
-      <div className="grid grid-cols-2 gap-4">
-        <ThreeDButton 
-          variant="secondary" 
-          className={`text-sm py-4 bg-white/5 border-white/10 ${isGuest && !isAdmin ? 'opacity-25 pointer-events-none' : ''}`} 
-          onClick={onAffiliate}
-          disabled={isGuest && !isAdmin}
-        >
-          🤝 {t.affiliate} {(isGuest && !isAdmin) && "🔒"}
-        </ThreeDButton>
-        <ThreeDButton variant="secondary" className="text-sm py-4 bg-white/5 border-brand-gold/30" onClick={onInfoCenter}>
-          ℹ️ Info & Support
-        </ThreeDButton>
-      </div>
-
-      {!audio.audioEnabled && (
-        <p className="text-center text-[10px] text-white/50 font-bold animate-pulse uppercase tracking-widest mt-2">
-          {t.enableMusic}
-        </p>
-      )}
+      {/* Footer Decoration */}
+      <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-brand-dark/20 to-transparent pointer-events-none -z-10"></div>
     </div>
   );
 };

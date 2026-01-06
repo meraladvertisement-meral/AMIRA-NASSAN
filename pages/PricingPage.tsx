@@ -90,13 +90,13 @@ const PricingPage: React.FC<PricingPageProps> = ({ onBack, t }) => {
               <div>
                 <h3 className="text-2xl font-black">{p.name}</h3>
                 <p className="text-brand-lime font-bold text-xl">
-                  €{billingCycle === 'monthly' ? p.monthly.toFixed(2) : p.yearly.toFixed(2)} 
+                  ${billingCycle === 'monthly' ? p.monthly.toFixed(2) : p.yearly.toFixed(2)} 
                   <span className="text-sm font-normal text-white/50"> / {billingCycle}</span>
                 </p>
                 {billingCycle === 'yearly' && (
                   <div className="mt-1">
                     <p className="text-[12px] text-brand-gold font-black uppercase tracking-wider italic">Includes 2 months free</p>
-                    <p className="text-[10px] text-white/60 font-bold">€{p.yearlyEquivalent.toFixed(2)} / month equivalent</p>
+                    <p className="text-[10px] text-white/60 font-bold">${p.yearlyEquivalent.toFixed(2)} / month equivalent</p>
                   </div>
                 )}
               </div>
@@ -135,7 +135,7 @@ const PricingPage: React.FC<PricingPageProps> = ({ onBack, t }) => {
               onClick={() => setCheckoutItem({ ...pack, type: 'pack' })}
               className="bg-brand-lime/20 text-brand-lime border border-brand-lime/30 w-full py-1 rounded-lg text-xs font-bold active:scale-95 transition"
             >
-              €{pack.price.toFixed(2)}
+              ${pack.price.toFixed(2)}
             </button>
           </GlassCard>
         ))}
@@ -152,7 +152,7 @@ const PricingPage: React.FC<PricingPageProps> = ({ onBack, t }) => {
             <div className="bg-white/10 p-4 rounded-2xl">
               <p className="text-sm text-white/60">Selected Item:</p>
               <p className="text-xl font-bold">
-                {checkoutItem.name || `Pack ${checkoutItem.id}`} - €{
+                {checkoutItem.name || `Pack ${checkoutItem.id}`} - ${
                   checkoutItem.type === 'pack' 
                     ? checkoutItem.price.toFixed(2) 
                     : (billingCycle === 'monthly' ? checkoutItem.monthly.toFixed(2) : checkoutItem.yearly.toFixed(2))

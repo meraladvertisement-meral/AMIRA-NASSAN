@@ -1,4 +1,3 @@
-
 export type QuestionType = 'MCQ' | 'TF' | 'FITB';
 export type Difficulty = 'easy' | 'medium' | 'hard';
 export type QuizSource = 'ai' | 'manual';
@@ -26,6 +25,7 @@ export interface QuizRecord {
   settings: QuizSettings;
   questions: Question[];
   pdfGenerated?: boolean;
+  pdfUrl?: string; // Reference to the generated Blob URL
   source?: QuizSource;
 }
 
@@ -49,6 +49,27 @@ export enum GameMode {
   TEACHER = 'TEACHER'
 }
 
+export interface RoomParticipant {
+  uid: string;
+  displayName: string;
+  photoURL?: string;
+  joinedAt: any;
+  score: number;
+  status: 'active' | 'finished';
+}
+
+export interface RoomData {
+  id: string;
+  hostUid: string;
+  quizId: string;
+  quizSnapshot: QuizRecord;
+  joinCode: string;
+  status: 'lobby' | 'started' | 'ended';
+  createdAt: any;
+  startedAt?: any;
+  settings: QuizSettings;
+}
+
 export type AppScreen = 
   | 'LANDING' 
   | 'HOME' 
@@ -63,5 +84,5 @@ export type AppScreen =
   | 'AFFILIATE'
   | 'SETTINGS'
   | 'INFO_CENTER'
-  | 'DUEL_LOBBY'
-  | 'DUEL_JOIN';
+  | 'ROOM_LOBBY'
+  | 'JOIN_ROOM';

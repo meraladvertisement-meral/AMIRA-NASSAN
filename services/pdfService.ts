@@ -2,36 +2,91 @@
 import { jsPDF } from 'jspdf';
 import { QuizRecord } from '../types/quiz';
 
-// Minimal Noto Sans Regular & Bold Base64 Strings (Simplified placeholders for structure)
-// In a production environment, replace these with full Base64 strings of NotoSans-Regular.ttf and NotoSans-Bold.ttf
-const notoSansRegularBase64 = "AAEAAAARAQAABAAQR0RFRv7W..."; 
-const notoSansBoldBase64 = "AAEAAAARAQAABAAQR0RFRv7W...";
+const pxPerMm = 3.78; // Standard conversion factor for 96 DPI
+// Regex for Arabic, Persian, and related RTL scripts
+const ARABIC_REGEX = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/;
 
 /**
  * pdfService handles the generation of printable Exam PDFs.
- * Updated to use Unicode fonts for Arabic, Turkish, and European characters.
+ * Updated: 
+ * - Precise RTL detection for Arabic script ranges.
+ * - Latin/Turkish correctly forced to LTR.
+ * - Sanitization to prevent jsPDF crashes on emojis/unsupported Unicode.
  */
 export const pdfService = {
   /**
-   * Helper to handle text direction and specific language corrections.
-   * For Arabic, it flips characters to simulate RTL if the engine requires it.
+   * Detects if a string contains characters that jsPDF standard fonts cannot handle (non-Latin-1).
    */
-  fixText(text: string, lang: string): string {
-    if (lang === 'ar' || this.isArabic(text)) {
-      // Basic RTL simulation: split into lines, reverse characters in each line
-      return text.split('\n').map(line => line.split('').reverse().join('')).join('\n');
-    }
-    return text;
+  needsImageRendering(text: string): boolean {
+    if (!text) return false;
+    // Detects anything outside standard ISO-8859-1 (Latin-1)
+    return /[^\x00-\xFF]/.test(text);
   },
 
   /**
-   * Detects if a string contains Arabic characters.
+   * Renders text to a Data URL via Canvas to handle complex scripts like Arabic (Shaping + RTL).
    */
-  isArabic(text: string): boolean {
-    return /[\u0600-\u06FF]/.test(text);
+  renderComplexTextToImage(text: string, maxWidthMm: number, fontPx: number, isBold: boolean): { dataUrl: string, wMm: number, hMm: number } | null {
+    if (!text || !text.trim()) return null;
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    const maxWidthPx = Math.max(1, maxWidthMm * pxPerMm);
+    const fontWeight = isBold ? 'bold' : 'normal';
+    // Use system fonts that support a wide range of Unicode
+    const fontStack = `${fontWeight} ${fontPx}px "Fredoka", "Arial", "sans-serif"`;
+    
+    ctx.font = fontStack;
+    
+    // Core Logic: Only trigger RTL if Arabic script characters are present.
+    // Turkish/Latin will default to LTR.
+    const isRtl = ARABIC_REGEX.test(text);
+    ctx.direction = isRtl ? 'rtl' : 'ltr';
+    ctx.textAlign = isRtl ? 'right' : 'left';
+
+    // Wrapping logic
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+
+    for (let i = 0; i < words.length; i++) {
+      const testLine = currentLine ? (isRtl ? `${words[i]} ${currentLine}` : `${currentLine} ${words[i]}`) : words[i];
+      const metrics = ctx.measureText(testLine);
+      if (metrics.width > maxWidthPx && i > 0) {
+        lines.push(currentLine);
+        currentLine = words[i];
+      } else {
+        currentLine = testLine;
+      }
+    }
+    lines.push(currentLine);
+
+    const lineHeight = fontPx * 1.4;
+    canvas.width = maxWidthPx;
+    canvas.height = Math.max(1, lines.length * lineHeight);
+
+    // Reset context properties after resize
+    ctx.font = fontStack;
+    ctx.direction = isRtl ? 'rtl' : 'ltr';
+    ctx.textAlign = isRtl ? 'right' : 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#000000';
+
+    lines.forEach((line, index) => {
+      const xPos = isRtl ? canvas.width : 0;
+      ctx.fillText(line, xPos, index * lineHeight);
+    });
+
+    return {
+      dataUrl: canvas.toDataURL('image/png'),
+      wMm: canvas.width / pxPerMm,
+      hMm: canvas.height / pxPerMm
+    };
   },
 
-  async generateExamPdf(quiz: QuizRecord, includeAnswerKey: boolean = false): Promise<string> {
+  async generateExamPdf(quiz: QuizRecord, includeAnswerKey: boolean = false): Promise<Blob> {
     const doc = new jsPDF({
       orientation: 'p',
       unit: 'mm',
@@ -39,150 +94,108 @@ export const pdfService = {
       putOnlyUsedFonts: true
     });
 
-    // 1. Register Unicode Fonts
-    try {
-      doc.addFileToVFS('NotoSans-Regular.ttf', notoSansRegularBase64);
-      doc.addFont('NotoSans-Regular.ttf', 'NotoSans', 'normal');
-      doc.addFileToVFS('NotoSans-Bold.ttf', notoSansBoldBase64);
-      doc.addFont('NotoSans-Bold.ttf', 'NotoSans', 'bold');
-    } catch (e) {
-      console.warn("Font registration failed, falling back to system fonts", e);
-    }
-
-    // 2. Set Default Font
-    doc.setFont('NotoSans', 'normal');
-
-    const lang = quiz.questionLanguage || 'en';
-    const globalIsAr = lang.startsWith('ar') || this.isArabic(quiz.questions[0]?.prompt || '');
-
     const margin = 20;
     let y = margin;
     const pageWidth = doc.internal.pageSize.getWidth();
     const contentWidth = pageWidth - (margin * 2);
 
     const checkPage = (heightNeeded: number) => {
-      if (y + heightNeeded > 280) {
+      if (y + heightNeeded > 275) {
         doc.addPage();
         y = margin;
-        doc.setFont('NotoSans', 'normal'); // Ensure font persists on new page
         return true;
       }
       return false;
     };
 
-    /**
-     * Helper to render text with proper font and direction.
-     */
-    const addText = (text: string, fontSize: number, isBold: boolean = false, color: [number, number, number] = [0, 0, 0]) => {
-      const isAr = this.isArabic(text);
-      const fixedText = this.fixText(text, isAr ? 'ar' : lang);
-      
-      doc.setFontSize(fontSize);
-      doc.setFont("NotoSans", isBold ? "bold" : "normal");
-      doc.setTextColor(color[0], color[1], color[2]);
+    const addTextBlock = (text: string, fontSize: number, isBold: boolean = false) => {
+      if (!text || !text.trim()) return;
 
-      const lines = doc.splitTextToSize(fixedText, contentWidth - 10);
-      checkPage(lines.length * (fontSize * 0.5) + 5);
-
-      lines.forEach((line: string) => {
-        if (isAr) {
-          doc.text(line, pageWidth - margin - 5, y + (fontSize * 0.3), { align: 'right' });
-        } else {
-          doc.text(line, margin + 5, y + (fontSize * 0.3), { align: 'left' });
+      if (this.needsImageRendering(text)) {
+        // Complex scripts (Arabic, Turkish specials, Emojis) go through Canvas
+        const render = this.renderComplexTextToImage(text, contentWidth, fontSize * 1.5, isBold);
+        if (render) {
+          checkPage(render.hMm);
+          const isAr = ARABIC_REGEX.test(text);
+          // If Arabic, align to right margin, otherwise align to left margin (e.g. Turkish specials)
+          const xPos = isAr ? (pageWidth - margin - render.wMm) : margin;
+          doc.addImage(render.dataUrl, 'PNG', xPos, y, render.wMm, render.hMm, undefined, 'FAST');
+          y += render.hMm + 2;
         }
-        y += (fontSize * 0.5);
-      });
-      y += 2;
+      } else {
+        // Standard Latin-1 rendering
+        doc.setFontSize(fontSize);
+        doc.setFont("helvetica", isBold ? "bold" : "normal");
+        
+        // Safety: Replace anything not in Latin-1 to prevent jsPDF metric crashes
+        const sanitized = text.replace(/[^\x00-\xFF]/g, '?');
+        const lines = doc.splitTextToSize(sanitized, contentWidth);
+        const textHeight = lines.length * (fontSize * 0.5);
+        
+        checkPage(textHeight + 5);
+        doc.text(lines, margin, y + (fontSize * 0.3));
+        y += textHeight + 4;
+      }
     };
 
     // --- Header ---
-    const title = globalIsAr ? this.fixText('SnapQuizGame — امتحان', 'ar') : 'SnapQuizGame — Exam';
-    doc.setFontSize(22);
-    doc.setFont("NotoSans", "bold");
-    doc.setTextColor(30, 58, 138); 
-    if (globalIsAr) {
-      doc.text(title, pageWidth - margin, y, { align: 'right' });
-    } else {
-      doc.text(title, margin, y, { align: 'left' });
-    }
-    y += 12;
-
-    doc.setFontSize(10);
-    doc.setFont("NotoSans", "normal");
-    doc.setTextColor(100);
-    const meta = `ID: ${quiz.id} | ${new Date().toLocaleDateString()}`;
-    if (globalIsAr) {
-      doc.text(meta, pageWidth - margin, y, { align: 'right' });
-    } else {
-      doc.text(meta, margin, y, { align: 'left' });
-    }
-    y += 8;
-
-    // --- Student Info Box ---
+    // Detect if the quiz primary language is Arabic for the header translation
+    const isAr = ARABIC_REGEX.test(quiz.questions[0]?.prompt || '');
+    const titleText = isAr ? 'SnapQuizGame — امتحان' : 'SnapQuizGame — Exam';
+    addTextBlock(titleText, 22, true);
+    addTextBlock(`ID: ${quiz.id} | ${new Date().toLocaleDateString()}`, 10);
+    
+    y += 5;
     doc.setDrawColor(200);
     doc.line(margin, y, pageWidth - margin, y);
     y += 10;
-    
-    addText(globalIsAr ? 'الاسم: _________________________________' : 'Name: _________________________________', 12);
-    addText(globalIsAr ? 'التاريخ: ____________    الفصل: ____________' : 'Date: ____________    Class: ____________', 12);
+
+    const nameLabel = isAr ? 'الاسم: _________________________________' : 'Name: _________________________________';
+    const dateLabel = isAr ? 'التاريخ: ____________    الفصل: ____________' : 'Date: ____________    Class: ____________';
+    addTextBlock(nameLabel, 12);
+    addTextBlock(dateLabel, 12);
     y += 5;
 
     // --- Questions ---
     for (let i = 0; i < quiz.questions.length; i++) {
       const q = quiz.questions[i];
-      checkPage(20);
+      checkPage(30);
       
-      // Question Header
-      const qNumText = globalIsAr ? `سؤال ${i + 1}:` : `Question ${i + 1}:`;
-      addText(qNumText, 10, true, [132, 204, 22]);
-      
-      // Question Prompt
-      addText(q.prompt, 12, true);
+      const qLabel = isAr ? `سؤال ${i + 1}:` : `Question ${i + 1}:`;
+      addTextBlock(qLabel, 10, true);
+      addTextBlock(q.prompt, 12, true);
       
       if (q.type === 'MCQ' || q.type === 'TF') {
         const options = q.options || [];
         for (let j = 0; j < options.length; j++) {
           const opt = options[j];
           checkPage(10);
-          
-          if (globalIsAr) {
-            const letter = String.fromCharCode(0x0623 + j); // Arabic Alif, Ba...
-            doc.rect(pageWidth - margin - 5, y, 4, 4);
-            addText(`${letter}) ${opt}`, 11);
-          } else {
-            const letter = String.fromCharCode(65 + j); // A, B, C...
-            doc.rect(margin + 5, y, 4, 4);
-            addText(`${letter}) ${opt}`, 11);
-          }
+          const letter = isAr ? `${String.fromCharCode(0x0623 + j)}) ` : `${String.fromCharCode(65 + j)}) `;
+          addTextBlock(letter + opt, 11);
         }
       } else if (q.type === 'FITB') {
         checkPage(15);
         doc.setDrawColor(220);
-        doc.line(margin + 5, y + 5, pageWidth - margin - 5, y + 5);
+        doc.line(margin, y + 5, pageWidth - margin, y + 5);
         y += 12;
       }
-      y += 6;
+      y += 4;
     }
 
-    // --- Answer Key Page ---
+    // --- Answer Key ---
     if (includeAnswerKey) {
       doc.addPage();
-      doc.setFont('NotoSans', 'normal');
       y = margin;
-      const keyHeader = globalIsAr ? 'مفتاح الإجابة' : 'Answer Key';
-      addText(keyHeader, 18, true, [30, 58, 138]);
+      addTextBlock(isAr ? 'مفتاح الإجابة' : 'Answer Key', 18, true);
       y += 10;
 
       for (let i = 0; i < quiz.questions.length; i++) {
         const q = quiz.questions[i];
-        const ansText = globalIsAr 
-          ? `${i + 1}. الإجابة: ${q.correctAnswer}` 
-          : `${i + 1}. Answer: ${q.correctAnswer}`;
-        addText(ansText, 12);
+        const ans = isAr ? `${i + 1}. الإجابة: ${q.correctAnswer}` : `${i + 1}. Answer: ${q.correctAnswer}`;
+        addTextBlock(ans, 12);
       }
     }
 
-    const blob = doc.output('blob');
-    return URL.createObjectURL(blob);
+    return doc.output('blob');
   }
 };

@@ -87,9 +87,9 @@ export const legalService = {
           3) <strong>Daily Cap:</strong> Rewards are capped at 5 activations per day. Additional activations are rolled over to the next day automatically.</p>
           
           <h3 class="font-bold text-brand-lime">B) Paid Affiliate Commission</h3>
-          <p class="mb-4">1) <strong>Commission:</strong> Earn a fixed 3 € commission for every new paid subscription referred through your link.<br>
+          <p class="mb-4">1) <strong>Commission:</strong> Earn a fixed $3 commission for every new paid subscription referred through your link.<br>
           2) <strong>Approval:</strong> Commissions are approved after a 30-day window, provided the subscription is not cancelled or refunded.<br>
-          3) <strong>Payout:</strong> Minimum payout is 20 €. Contact support for payment arrangements.</p>
+          3) <strong>Payout:</strong> Minimum payout is $20. Contact support for payment arrangements.</p>
         `
       },
       de: {
@@ -166,9 +166,9 @@ export const legalService = {
           3) <strong>Tageslimit:</strong> Belohnungen sind auf 5 Aktivierungen pro Tag begrenzt. Weitere Aktivierungen werden automatisch auf den nächsten Tag übertragen.</p>
           
           <h3 class="font-bold text-brand-lime">B) Bezahlte Partner-Provision</h3>
-          <p class="mb-4">1) <strong>Provision:</strong> Verdienen Sie eine feste Provision von 3 € für jedes neue kostenpflichtige Abonnement, das über Ihren Link vermittelt wurde.<br>
+          <p class="mb-4">1) <strong>Provision:</strong> Verdienen Sie eine feste Provision von $3 für jedes neue kostenpflichtige Abonnement, das über Ihren Link vermittelt wurde.<br>
           2) <strong>Freigabe:</strong> Provisionen werden nach einer 30-tägigen Frist freigegeben, sofern das Abonnement nicht gekündigt oder erstattet wurde.<br>
-          3) <strong>Auszahlung:</strong> Die Mindestauszahlung beträgt 20 €. Kontaktieren Sie den Support für Auszahlungsmodalitäten.</p>
+          3) <strong>Auszahlung:</strong> Die Mindestauszahlung beträgt $20. Kontaktieren Sie den Support für Auszahlungsmodalitäten.</p>
         `
       }
     };
