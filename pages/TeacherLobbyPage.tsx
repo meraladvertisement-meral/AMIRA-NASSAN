@@ -107,7 +107,7 @@ const TeacherLobbyPage: React.FC<TeacherLobbyPageProps> = ({ code, quiz, onStart
         </button>
       </GlassCard>
 
-      {/* PDF Options Block - Identical to ReadyPage */}
+      {/* PDF Options Block - Aligned with ReadyPage */}
       <GlassCard className="border-brand-gold/30 space-y-4">
         <h3 className="text-brand-gold font-bold uppercase tracking-widest text-xs flex items-center gap-2">
           📄 PDF Options

@@ -144,7 +144,7 @@ const DuelLobbyPage: React.FC<DuelLobbyPageProps> = ({ code, joined, quiz, onSta
         </div>
       </GlassCard>
 
-      {/* PDF Options Block - Identical to ReadyPage */}
+      {/* PDF Options Block - Consistent with ReadyPage */}
       <GlassCard className="border-brand-gold/30 space-y-4">
         <h3 className="text-brand-gold font-bold uppercase tracking-widest text-xs flex items-center gap-2">
           📄 PDF Options
