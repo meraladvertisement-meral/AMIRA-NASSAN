@@ -1,8 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GlassCard } from '../components/layout/GlassCard';
 import { ThreeDButton } from '../components/layout/ThreeDButton';
 import { billingService } from '../services/billingService';
+import { Entitlement } from '../types/billing';
 
 interface PricingPageProps {
   onBack: () => void;
@@ -11,186 +12,114 @@ interface PricingPageProps {
 
 const PricingPage: React.FC<PricingPageProps> = ({ onBack, t }) => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
-  const [checkoutItem, setCheckoutItem] = useState<any | null>(null);
+  const [entitlement, setEntitlement] = useState<Entitlement>(billingService.getEntitlement());
   
-  // Consents for EU Compliance
-  const [consentImmediate, setConsentImmediate] = useState(false);
-  const [consentAcknowledge, setConsentAcknowledge] = useState(false);
-
   const plans = [
     { 
       id: 'plus', 
       name: 'Plus', 
       monthly: 8.99, 
       yearly: 89.90,
-      yearlyEquivalent: 7.49,
-      features: [
-        '200 plays / month (Solo + Duel)', 
-        '20 Teacher quizzes / month'
-      ] 
+      features: ['200 plays / month', '20 Teacher quizzes / month'] 
     },
     { 
       id: 'unlimited', 
       name: 'Unlimited', 
       monthly: 18.99, 
       yearly: 189.90,
-      yearlyEquivalent: 15.83,
-      features: [
-        'Unlimited plays (Solo + Duel) — Fair Use', 
-        '60 Teacher quizzes / month'
-      ] 
+      features: ['Unlimited plays', '60 Teacher quizzes / month'] 
     },
   ];
 
-  const packs = [
-    { id: 'S', count: 50, price: 2.99 },
-    { id: 'M', count: 120, price: 5.49 },
-    { id: 'L', count: 300, price: 11.99 },
-  ];
+  const handleSubscribe = (planId: string) => {
+    const ent = billingService.getEntitlement();
+    ent.planId = planId as any;
+    ent.subscriptionStartAt = Date.now();
+    billingService.save(ent);
+    setEntitlement({ ...ent });
+    alert(t.appName === 'سناب كويز' ? "تم تفعيل الاشتراك!" : "Subscription Activated!");
+  };
 
-  const handlePurchase = () => {
-    if (checkoutItem.type === 'pack') {
-      if (!consentAcknowledge) return alert("Please acknowledge withdrawal right expiry.");
-      billingService.addPack(checkoutItem.count);
+  const handleCancel = () => {
+    const ent = billingService.getEntitlement();
+    const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
+    const isWithinRefundingPeriod = ent.subscriptionStartAt && (Date.now() - ent.subscriptionStartAt < fourteenDaysMs);
+
+    if (isWithinRefundingPeriod) {
+      const confirmRefund = confirm(
+        t.appName === 'سناب كويز' 
+        ? "أنت ضمن فترة الـ 14 يوماً القانونية. هل تريد إلغاء الاشتراك واسترداد كامل المبلغ؟" 
+        : "You are within the legal 14-day window. Would you like to cancel and receive a FULL REFUND?"
+      );
+      if (confirmRefund) {
+        ent.planId = 'free';
+        ent.subscriptionStartAt = undefined;
+        billingService.save(ent);
+        setEntitlement({ ...ent });
+        alert(t.appName === 'سناب كويز' ? "تم الإلغاء والاسترداد بنجاح." : "Cancelled and refunded successfully.");
+      }
     } else {
-      if (!consentImmediate || !consentAcknowledge) return alert("Please accept the terms.");
-      const ent = billingService.getEntitlement();
-      ent.planId = checkoutItem.id;
-      ent.cycle = billingCycle;
-      ent.subscriptionStartAt = Date.now();
-      billingService.save(ent);
+      const confirmCancel = confirm(
+        t.appName === 'سناب كويز' 
+        ? "سيتم إلغاء التجديد التلقائي فقط بدون استرداد لأنك تجاوزت 14 يوماً. هل تريد الاستمرار؟" 
+        : "Only auto-renewal will be cancelled (no refund) as you passed the 14-day window. Continue?"
+      );
+      if (confirmCancel) {
+        ent.planId = 'free';
+        billingService.save(ent);
+        setEntitlement({ ...ent });
+        alert(t.appName === 'سناب كويز' ? "تم إلغاء التجديد." : "Auto-renewal cancelled.");
+      }
     }
-    setCheckoutItem(null);
-    alert("Purchase Successful (Mock Mode)");
   };
 
   return (
-    <div className="p-6 max-w-lg mx-auto min-h-screen flex flex-col gap-6">
+    <div className="p-6 max-w-lg mx-auto min-h-screen flex flex-col gap-6 pb-20">
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-black italic">{t.pricing}</h2>
         <button onClick={onBack} className="glass px-4 py-2 rounded-xl text-sm font-bold">←</button>
       </div>
 
-      {/* Cycle Toggle */}
       <div className="flex bg-white/10 p-1 rounded-2xl">
-        <button 
-          onClick={() => setBillingCycle('monthly')}
-          className={`flex-1 py-2 rounded-xl font-bold transition ${billingCycle === 'monthly' ? 'bg-white text-brand-dark shadow-lg' : 'text-white/60'}`}
-        >Monthly</button>
-        <button 
-          onClick={() => setBillingCycle('yearly')}
-          className={`flex-1 py-2 rounded-xl font-bold transition ${billingCycle === 'yearly' ? 'bg-white text-brand-dark shadow-lg' : 'text-white/60'}`}
-        >Yearly</button>
+        <button onClick={() => setBillingCycle('monthly')} className={`flex-1 py-2 rounded-xl font-bold transition ${billingCycle === 'monthly' ? 'bg-white text-brand-dark' : 'text-white/60'}`}>Monthly</button>
+        <button onClick={() => setBillingCycle('yearly')} className={`flex-1 py-2 rounded-xl font-bold transition ${billingCycle === 'yearly' ? 'bg-white text-brand-dark' : 'text-white/60'}`}>Yearly</button>
       </div>
 
       <div className="space-y-4">
-        {plans.map(p => (
-          <GlassCard key={p.id} className={p.id === 'plus' ? 'border-brand-lime border-2' : 'border-white/10'}>
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="text-2xl font-black">{p.name}</h3>
-                <p className="text-brand-lime font-bold text-xl">
-                  ${billingCycle === 'monthly' ? p.monthly.toFixed(2) : p.yearly.toFixed(2)} 
-                  <span className="text-sm font-normal text-white/50"> / {billingCycle}</span>
-                </p>
-                {billingCycle === 'yearly' && (
-                  <div className="mt-1">
-                    <p className="text-[12px] text-brand-gold font-black uppercase tracking-wider italic">Includes 2 months free</p>
-                    <p className="text-[10px] text-white/60 font-bold">${p.yearlyEquivalent.toFixed(2)} / month equivalent</p>
-                  </div>
-                )}
-              </div>
-            </div>
-            <ul className="text-sm text-white/80 space-y-2 mb-6">
-              {p.features.map(f => (
-                <li key={f} className="flex items-start gap-2">
-                  <span className="text-brand-lime">✓</span> 
-                  {f}
-                </li>
-              ))}
-            </ul>
-            <ThreeDButton 
-              variant={p.id === 'plus' ? 'primary' : 'secondary'} 
-              className="w-full py-3"
-              onClick={() => setCheckoutItem({ ...p, type: 'subscription' })}
-            >
-              Subscribe Now
-            </ThreeDButton>
-          </GlassCard>
-        ))}
-      </div>
-
-      <p className="text-[10px] text-center text-white/40 font-bold uppercase tracking-widest">
-        Subscriptions renew automatically until cancelled.
-      </p>
-
-      <h3 className="text-xl font-bold mt-4">Play Packs (One-time)</h3>
-      <div className="grid grid-cols-3 gap-2">
-        {packs.map(pack => (
-          <GlassCard key={pack.id} className="p-3 text-center flex flex-col items-center border-white/10">
-            <p className="text-[10px] font-bold text-brand-gold">PACK {pack.id}</p>
-            <p className="text-xl font-black">{pack.count}</p>
-            <p className="text-[10px] opacity-60 mb-2">Plays</p>
-            <button 
-              onClick={() => setCheckoutItem({ ...pack, type: 'pack' })}
-              className="bg-brand-lime/20 text-brand-lime border border-brand-lime/30 w-full py-1 rounded-lg text-xs font-bold active:scale-95 transition"
-            >
-              ${pack.price.toFixed(2)}
-            </button>
-          </GlassCard>
-        ))}
-      </div>
-      <p className="text-[10px] text-center text-white/40 font-bold uppercase tracking-widest">
-        Packs expire 90 days after purchase.
-      </p>
-
-      {/* EU Compliance Checkout Modal */}
-      {checkoutItem && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/90 backdrop-blur-md">
-          <GlassCard className="w-full max-w-md space-y-6">
-            <h2 className="text-2xl font-black italic">Checkout</h2>
-            <div className="bg-white/10 p-4 rounded-2xl">
-              <p className="text-sm text-white/60">Selected Item:</p>
-              <p className="text-xl font-bold">
-                {checkoutItem.name || `Pack ${checkoutItem.id}`} - ${
-                  checkoutItem.type === 'pack' 
-                    ? checkoutItem.price.toFixed(2) 
-                    : (billingCycle === 'monthly' ? checkoutItem.monthly.toFixed(2) : checkoutItem.yearly.toFixed(2))
-                }
+        {plans.map(p => {
+          const isActive = entitlement.planId === p.id;
+          return (
+            <GlassCard key={p.id} className={isActive ? 'border-brand-lime border-2' : ''}>
+              <h3 className="text-2xl font-black mb-1">{p.name}</h3>
+              <p className="text-brand-lime font-bold text-xl mb-4">
+                ${billingCycle === 'monthly' ? p.monthly : p.yearly} 
+                <span className="text-sm text-white/50"> / {billingCycle}</span>
               </p>
-            </div>
-
-            <div className="space-y-4">
-              {checkoutItem.type === 'subscription' ? (
-                <>
-                  <label className="flex gap-3 cursor-pointer">
-                    <input type="checkbox" checked={consentImmediate} onChange={e => setConsentImmediate(e.target.checked)} className="w-5 h-5 accent-brand-lime" />
-                    <span className="text-xs text-white/70">I request immediate start of the service before the 14-day withdrawal period ends.</span>
-                  </label>
-                  <label className="flex gap-3 cursor-pointer">
-                    <input type="checkbox" checked={consentAcknowledge} onChange={e => setConsentAcknowledge(e.target.checked)} className="w-5 h-5 accent-brand-lime" />
-                    <span className="text-xs text-white/70">I understand that if I withdraw within 14 days, usage compensation will be deducted from the refund.</span>
-                  </label>
-                </>
+              <ul className="text-sm text-white/70 space-y-2 mb-6">
+                {p.features.map(f => <li key={f}>✓ {f}</li>)}
+              </ul>
+              
+              {isActive ? (
+                <ThreeDButton variant="danger" className="w-full py-3" onClick={handleCancel}>
+                  {t.appName === 'سناب كويز' ? 'إلغاء الاشتراك' : 'Cancel Subscription'}
+                </ThreeDButton>
               ) : (
-                <label className="flex gap-3 cursor-pointer">
-                  <input type="checkbox" checked={consentAcknowledge} onChange={e => setConsentAcknowledge(e.target.checked)} className="w-5 h-5 accent-brand-lime" />
-                  <span className="text-xs text-white/70">I agree to immediate supply of the digital credit and lose my 14-day withdrawal right once supply begins.</span>
-                </label>
+                <ThreeDButton variant="primary" className="w-full py-3" onClick={() => handleSubscribe(p.id)}>
+                  {t.appName === 'سناب كويز' ? 'اشترك الآن' : 'Subscribe Now'}
+                </ThreeDButton>
               )}
-            </div>
+            </GlassCard>
+          );
+        })}
+      </div>
 
-            <div className="flex gap-3">
-              <ThreeDButton variant="secondary" className="flex-1 py-3" onClick={() => setCheckoutItem(null)}>Cancel</ThreeDButton>
-              <ThreeDButton 
-                variant="primary" 
-                className="flex-1 py-3" 
-                onClick={handlePurchase}
-              >Pay Now</ThreeDButton>
-            </div>
-          </GlassCard>
-        </div>
-      )}
+      <div className="mt-8 p-4 glass rounded-2xl border-brand-gold/30 bg-brand-gold/5">
+        <p className="text-[10px] text-white/60 leading-relaxed italic text-center">
+          {t.appName === 'سناب كويز' 
+            ? "يحق للمستخدم في الاتحاد الأوروبي إلغاء الاشتراك خلال 14 يومًا من تاريخ الشراء واسترجاع كامل المبلغ وفقًا لقوانين حماية المستهلك في الاتحاد الأوروبي."
+            : "EU users have the right to cancel their subscription within 14 days of purchase and receive a full refund in accordance with EU consumer protection laws."}
+        </p>
+      </div>
     </div>
   );
 };

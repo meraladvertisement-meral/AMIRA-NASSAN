@@ -54,6 +54,7 @@ export const translations = {
     noHistory: "No history yet",
     generatePdf: "Create PDF",
     downloadPdf: "Download",
+    generationError: "Failed to generate quiz. Please try again.",
     terms: "Terms",
     privacy: "Privacy",
     impressum: "Impressum"
@@ -110,6 +111,7 @@ export const translations = {
     noHistory: "Noch kein Verlauf",
     generatePdf: "PDF erstellen",
     downloadPdf: "Download",
+    generationError: "Quiz-Erstellung fehlgeschlagen. Bitte erneut versuchen.",
     terms: "AGB",
     privacy: "Datenschutz",
     impressum: "Impressum"
@@ -166,6 +168,7 @@ export const translations = {
     noHistory: "لا يوجد سجل بعد",
     generatePdf: "إنشاء PDF",
     downloadPdf: "تحميل",
+    generationError: "فشل إنشاء الاختبار. يرجى المحاولة مرة أخرى.",
     terms: "الشروط",
     privacy: "الخصوصية",
     impressum: "بيانات الناشر"

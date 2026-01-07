@@ -1,5 +1,4 @@
 
-// Add React import to fix 'Cannot find namespace React' error.
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ThreeDButton } from '../components/layout/ThreeDButton';
 
@@ -22,36 +21,29 @@ const BalloonGame: React.FC<BalloonGameProps> = ({ onComplete, t, audio }) => {
   const [balloons, setBalloons] = useState<Balloon[]>([]);
   const finishedRef = useRef(false);
 
+  // تشغيل موسيقى الأركيد عند البدء
   useEffect(() => {
+    audio.enableAudio();
     audio.startMusic('arcade');
     return () => audio.stopMusic();
   }, [audio]);
 
-  // صوت تكتكة المؤقت
+  // منطق المؤقت والأصوات المتعلقة به
   useEffect(() => {
-    if (timeLeft > 0 && timeLeft <= 5) {
-      audio.playSfx('tick');
-    }
-    
-    if (timeLeft === 0 && !finishedRef.current) {
+    if (timeLeft > 0) {
+      // صوت تكتكة في آخر 5 ثوانٍ
+      if (timeLeft <= 5) {
+        audio.playSfx('tick');
+      }
+      
+      const timer = setTimeout(() => setTimeLeft(prev => prev - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (timeLeft === 0 && !finishedRef.current) {
       finishedRef.current = true;
-      audio.playSfx('game_over');
+      audio.playSfx('game_over'); // صوت انتهاء الوقت
       audio.stopMusic();
     }
   }, [timeLeft, audio]);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   const addBalloon = useCallback(() => {
     if (timeLeft <= 0) return;
@@ -79,7 +71,7 @@ const BalloonGame: React.FC<BalloonGameProps> = ({ onComplete, t, audio }) => {
 
   const pop = (id: number) => {
     if (timeLeft <= 0) return;
-    audio.playSfx('pop');
+    audio.playSfx('pop'); // صوت فرقعة البالون
     if ('vibrate' in navigator) navigator.vibrate(50);
     setBalloons(prev => prev.filter(b => b.id !== id));
     setPopped(prev => prev + 1);
@@ -90,7 +82,7 @@ const BalloonGame: React.FC<BalloonGameProps> = ({ onComplete, t, audio }) => {
       <div className={`absolute top-10 left-1/2 -translate-x-1/2 z-20 text-center transition-all ${timeLeft <= 5 ? 'scale-150 text-red-500 animate-pulse' : 'text-white'}`}>
         <p className="text-5xl font-black tabular-nums">{timeLeft}s</p>
         <p className="text-brand-lime font-bold uppercase tracking-widest text-xs mt-2">
-          {t.appName === 'سناب كويز' ? 'فرقعة' : 'Popped'}: {popped}
+          {t.appName === 'سناب كويز' ? 'البالونات' : 'Balloons'}: {popped}
         </p>
       </div>
 
@@ -98,7 +90,7 @@ const BalloonGame: React.FC<BalloonGameProps> = ({ onComplete, t, audio }) => {
         <div 
           key={b.id}
           onPointerDown={() => pop(b.id)}
-          className="absolute cursor-pointer rounded-full flex items-center justify-center"
+          className="absolute cursor-pointer rounded-full flex items-center justify-center transition-transform active:scale-150"
           style={{
             left: `${b.x}%`,
             top: `${b.y}%`,
@@ -106,7 +98,6 @@ const BalloonGame: React.FC<BalloonGameProps> = ({ onComplete, t, audio }) => {
             height: '90px',
             backgroundColor: b.color,
             boxShadow: 'inset -8px -8px 15px rgba(0,0,0,0.3), 5px 5px 20px rgba(0,0,0,0.2)',
-            transition: 'top 0.02s linear'
           }}
         >
           <div className="w-0.5 h-6 bg-white/20 absolute bottom-[-15px] left-1/2 -translate-x-1/2"></div>
@@ -117,7 +108,7 @@ const BalloonGame: React.FC<BalloonGameProps> = ({ onComplete, t, audio }) => {
         <div className="absolute inset-0 z-50 flex items-center justify-center glass backdrop-blur-xl animate-in fade-in duration-1000">
           <div className="text-center p-10 bg-black/60 rounded-[3rem] border border-white/20 shadow-2xl scale-110">
             <h2 className="text-6xl font-black text-brand-gold mb-4 italic animate-bounce">
-              {t.appName === 'سناب كويز' ? 'بطل البالونات!' : 'BALLOON HERO!'}
+              {t.appName === 'سناب كويز' ? 'انتهى الوقت!' : 'TIME UP!'}
             </h2>
             <p className="text-3xl font-bold text-white mb-10">{popped} {t.appName === 'سناب كويز' ? 'بالون' : 'Balloons'}</p>
             <ThreeDButton onClick={() => onComplete(popped)} className="px-12 py-5 text-xl">

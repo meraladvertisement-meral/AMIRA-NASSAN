@@ -1,7 +1,8 @@
 
-const { GoogleGenAI, Type } = require("@google/genai");
+// Use import for GoogleGenAI and Type as per guidelines
+import { GoogleGenAI, Type } from "@google/genai";
 
-exports.handler = async (event, context) => {
+export const handler = async (event, context) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -15,6 +16,7 @@ exports.handler = async (event, context) => {
   }
 
   try {
+    // API key must be obtained from process.env.API_KEY
     const apiKey = process.env.API_KEY;
     if (!apiKey || apiKey === "YOUR_API_KEY_HERE") {
       return { 
@@ -37,7 +39,8 @@ exports.handler = async (event, context) => {
     }
 
     const { content, settings, isImage, language } = body;
-    const ai = new GoogleGenAI({ apiKey });
+    // Always use new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const difficultyDesc = settings.difficulty === 'mixed' 
       ? 'a balanced mix of easy, medium, and hard questions' 
@@ -58,15 +61,17 @@ exports.handler = async (event, context) => {
       ? "Create a quiz based on this image. Ensure all multiple choice options are unique and do not repeat."
       : `Create a quiz based on the following content. Ensure all multiple choice options are unique and do not repeat: ${content.substring(0, 10000)}`;
 
-    const contents = [{ parts: [{ text: promptText }] }];
+    // Correct structure for multi-part content
+    const contents = { parts: [{ text: promptText }] };
 
     if (isImage) {
       const base64Data = content.includes('base64,') ? content.split(',')[1] : content;
-      contents[0].parts.push({
+      contents.parts.push({
         inlineData: { mimeType: "image/jpeg", data: base64Data }
       });
     }
 
+    // Always use ai.models.generateContent to query GenAI with both the model name and prompt
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents,
@@ -98,8 +103,10 @@ exports.handler = async (event, context) => {
       },
     });
 
+    // Access the .text property directly (not a method)
     let jsonString = response.text || "";
     
+    // Fallback cleanup if model includes markdown markers
     if (jsonString.includes("```")) {
       jsonString = jsonString.replace(/```json/g, "").replace(/```/g, "").trim();
     }

@@ -1,13 +1,13 @@
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
 const SFX = {
   click: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
-  correct: 'https://assets.mixkit.co/active_storage/sfx/2700/2700-preview.mp3', // صوت نجاح مميز
+  correct: 'https://assets.mixkit.co/active_storage/sfx/2700/2700-preview.mp3',
   wrong: 'https://assets.mixkit.co/active_storage/sfx/2561/2561-preview.mp3',
   pop: 'https://assets.mixkit.co/active_storage/sfx/2569/2569-preview.mp3',
   win: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3',
-  tick: 'https://assets.mixkit.co/active_storage/sfx/2570/2570-preview.mp3', // صوت تكتكة المؤقت
+  tick: 'https://assets.mixkit.co/active_storage/sfx/2570/2570-preview.mp3',
   game_over: 'https://assets.mixkit.co/active_storage/sfx/2562/2562-preview.mp3',
 };
 
@@ -17,7 +17,6 @@ const MUSIC = {
 };
 
 export function useAudio() {
-  // الافتراضي صامت (true) إذا لم يكن هناك خيار محفوظ
   const [isMuted, setIsMuted] = useState(() => {
     const saved = localStorage.getItem('sqg_muted');
     return saved === null ? true : saved === 'true';
@@ -36,7 +35,10 @@ export function useAudio() {
   const stopMusic = useCallback(() => {
     if (musicRef.current) {
       musicRef.current.pause();
+      musicRef.current.onended = null;
+      musicRef.current.oncanplay = null;
       musicRef.current.src = "";
+      musicRef.current.load(); 
       musicRef.current = null;
     }
   }, []);
@@ -45,7 +47,7 @@ export function useAudio() {
     if (isMuted || !audioEnabled) return;
     try {
       const audio = new Audio(SFX[type]);
-      audio.volume = type === 'tick' ? 0.3 : 0.6;
+      audio.volume = type === 'tick' ? 0.2 : 0.5;
       audio.play().catch(() => {});
     } catch (e) {}
   }, [isMuted, audioEnabled]);
@@ -57,7 +59,7 @@ export function useAudio() {
       const audioObj = new Audio(MUSIC[type]);
       audioObj.loop = true;
       audioObj.muted = isMuted;
-      audioObj.volume = 0.3;
+      audioObj.volume = 0.25;
       musicRef.current = audioObj;
       audioObj.play().catch(() => {});
     } catch (e) {}
@@ -66,13 +68,24 @@ export function useAudio() {
   const enableAudio = useCallback(() => {
     if (audioEnabled) return;
     setAudioEnabled(true);
-    // فتح سياق الصوت للمتصفح
     const silent = new Audio(SFX.click);
     silent.volume = 0;
     silent.play().catch(() => {});
   }, [audioEnabled]);
 
-  const toggleMute = () => setIsMuted(prev => !prev);
+  const toggleMute = useCallback(() => {
+    setIsMuted(prev => !prev);
+  }, []);
 
-  return { isMuted, toggleMute, playSfx, startMusic, stopMusic, enableAudio, audioEnabled };
+  const audioContext = useMemo(() => ({
+    isMuted,
+    toggleMute,
+    playSfx,
+    startMusic,
+    stopMusic,
+    enableAudio,
+    audioEnabled
+  }), [isMuted, toggleMute, playSfx, startMusic, stopMusic, enableAudio, audioEnabled]);
+
+  return audioContext;
 }
