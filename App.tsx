@@ -107,7 +107,9 @@ export default function App() {
     localStorage.setItem('sqg_mode', 'guest');
     setIsGuest(true);
     setIsAdmin(false);
-    setUser({ uid: 'guest-' + Math.random().toString(36).substr(2, 5), displayName: 'Guest Explorer' });
+    const guestUid = 'guest-' + Math.random().toString(36).substr(2, 5);
+    localStorage.setItem('sqg_guest_uid', guestUid);
+    setUser({ uid: guestUid, displayName: 'Guest Explorer' });
     if (redirect && !checkJoinParams()) setScreen('HOME');
   };
 
@@ -123,6 +125,7 @@ export default function App() {
 
   const handleLogout = async () => {
     localStorage.removeItem('sqg_mode');
+    localStorage.removeItem('sqg_guest_uid');
     setIsGuest(false);
     setIsAdmin(false);
     setUser(null);
@@ -195,7 +198,19 @@ export default function App() {
       )}
 
       {screen === 'CONFIG' && <ConfigPage settings={settings} setSettings={setSettings} onStart={handleStartQuiz} onStartManual={handleStartManual} onBack={() => setScreen('HOME')} t={t} />}
-      {screen === 'ROOM_LOBBY' && activeRoomId && <RoomLobbyPage roomId={activeRoomId} onStart={() => setScreen('ARENA')} onBack={() => setScreen('HOME')} t={t} />}
+      
+      {screen === 'ROOM_LOBBY' && activeRoomId && (
+        <RoomLobbyPage 
+          roomId={activeRoomId} 
+          onStart={(roomQuiz) => {
+            setQuiz(roomQuiz);
+            setScreen('ARENA');
+          }} 
+          onBack={() => setScreen('HOME')} 
+          t={t} 
+        />
+      )}
+
       {screen === 'JOIN_ROOM' && <JoinRoomPage onJoinSuccess={(rid) => { setActiveRoomId(rid); setScreen('ROOM_LOBBY'); }} onBack={() => (user ? setScreen('HOME') : setScreen('LANDING'))} t={t} />}
       {screen === 'LOADING' && <LoadingPage t={t} error={loadingError} onCancel={() => setScreen('CONFIG')} onRetry={() => setScreen('CONFIG')} onBack={() => setScreen('CONFIG')} />}
       {screen === 'READY' && quiz && <ReadyPage quiz={quiz} onStart={() => setScreen('ARENA')} onBack={() => setScreen('CONFIG')} t={t} />}

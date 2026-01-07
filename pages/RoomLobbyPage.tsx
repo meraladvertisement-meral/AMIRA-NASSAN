@@ -4,10 +4,11 @@ import { GlassCard } from '../components/layout/GlassCard';
 import { ThreeDButton } from '../components/layout/ThreeDButton';
 import { roomService } from '../services/roomService';
 import { auth } from '../services/firebase';
+import { QuizRecord } from '../types/quiz';
 
 interface RoomLobbyPageProps {
   roomId: string;
-  onStart: () => void;
+  onStart: (quiz: QuizRecord) => void;
   onBack: () => void;
   t: any;
 }
@@ -19,17 +20,26 @@ const RoomLobbyPage: React.FC<RoomLobbyPageProps> = ({ roomId, onStart, onBack, 
   const [isExpired, setIsExpired] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const isHost = room?.hostUid === auth.currentUser?.uid;
+  const isHost = room?.hostUid === (auth.currentUser?.uid || localStorage.getItem('sqg_guest_uid'));
   const joinUrl = `${window.location.origin}/?join=${room?.joinCode}`;
 
   useEffect(() => {
+    // Subscribe to session changes
     const unsubRoom = roomService.subscribeToSession(roomId, (data) => {
       setRoom(data);
-      if (data.status === 'started' && !isHost) onStart();
+      // If the game has started in the database, trigger the start UI for everyone
+      if (data.status === 'started' && data.quizSnapshot) {
+        onStart(data.quizSnapshot);
+      }
     });
+
     const unsubPlayers = roomService.subscribeToPlayers(roomId, setPlayers);
-    return () => { unsubRoom(); unsubPlayers(); };
-  }, [roomId, isHost, onStart]);
+    
+    return () => { 
+      unsubRoom(); 
+      unsubPlayers(); 
+    };
+  }, [roomId, onStart]);
 
   useEffect(() => {
     if (!room?.expiresAt) return;
@@ -55,6 +65,16 @@ const RoomLobbyPage: React.FC<RoomLobbyPageProps> = ({ roomId, onStart, onBack, 
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleHostStart = async () => {
+    if (!isHost) return;
+    try {
+      await roomService.startSession(roomId);
+      // The useEffect subscription will handle the transition for everyone including the host
+    } catch (err) {
+      console.error("Failed to start session", err);
+    }
+  };
+
   if (isExpired) {
     return (
       <div className="p-6 h-screen flex flex-col items-center justify-center text-center gap-6">
@@ -68,7 +88,10 @@ const RoomLobbyPage: React.FC<RoomLobbyPageProps> = ({ roomId, onStart, onBack, 
   return (
     <div className="p-6 max-w-lg mx-auto min-h-screen flex flex-col gap-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-black italic">{room?.mode} Lobby</h2>
+        <div className="flex flex-col">
+           <h2 className="text-2xl font-black italic text-brand-lime leading-none">SnapQuiz</h2>
+           <span className="text-[10px] font-black uppercase tracking-widest text-white/40">{room?.mode} Mode</span>
+        </div>
         <div className="bg-red-500/20 px-4 py-2 rounded-xl border border-red-500/30">
           <span className="text-red-400 font-black text-xl tabular-nums">{timeLeft}</span>
         </div>
@@ -101,8 +124,13 @@ const RoomLobbyPage: React.FC<RoomLobbyPageProps> = ({ roomId, onStart, onBack, 
           ) : (
             players.map((p, i) => (
               <GlassCard key={i} className="p-4 border-white/10 flex items-center justify-between animate-in slide-in-from-right-4">
-                <span className="font-bold">{p.displayName}</span>
-                <span className="text-[10px] text-brand-lime font-black uppercase">Ready</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-brand-lime animate-pulse"></div>
+                  <span className="font-bold">{p.displayName}</span>
+                </div>
+                <span className="text-[10px] text-white/30 font-black uppercase">
+                  {p.uid === room?.hostUid ? 'HOST' : 'PLAYER'}
+                </span>
               </GlassCard>
             ))
           )}
@@ -114,7 +142,7 @@ const RoomLobbyPage: React.FC<RoomLobbyPageProps> = ({ roomId, onStart, onBack, 
           variant="primary" 
           className="w-full py-5 text-xl" 
           disabled={players.length === 0}
-          onClick={() => roomService.startSession(roomId)}
+          onClick={handleHostStart}
         >
           Start Quiz 🚀
         </ThreeDButton>
