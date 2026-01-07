@@ -25,43 +25,44 @@ export class GeminiService {
     lang: string = "en"
   ): Promise<{ questions: Question[], language: string }> {
     try {
-      // Use the model recommended for Basic/Complex text tasks
       const modelName = 'gemini-3-flash-preview';
       
-      const systemInstruction = `You are a professional educational content creator.
-      Create a high-quality quiz in ${lang === 'de' ? 'German' : 'English'}.
-      
-      Difficulty: ${settings.difficulty}.
-      Question Count: ${settings.questionCount}.
-      Types: ${settings.types.join(", ")}.
+      const difficultyDesc = settings.difficulty === 'mixed' 
+        ? 'a balanced mix of easy, medium, and hard questions' 
+        : settings.difficulty;
 
-      Rules:
-      - MCQ: 4 options, correctAnswer must be one of the options.
-      - FITB: 'correctAnswer' is the word/phrase for the blank, 'options' are 3 distractors.
-      - Return valid JSON only.`;
+      const systemInstruction = `You are an expert educator. Create a high-quality quiz in ${lang === 'de' ? 'German' : 'English'}.
+      Difficulty: ${difficultyDesc}.
+      Question Count: ${settings.questionCount}.
+      Selected Question Types: ${settings.types.join(", ")}.
+
+      JSON Rules:
+      - MCQ: 4 options, 1 correctAnswer.
+      - TF: options ["True", "False"], 1 correctAnswer.
+      - FITB: prompt must have a "_______", options must be 3 distractors, correctAnswer is the missing word.
+      - Return a valid JSON object.`;
 
       const promptText = isImage 
-        ? "Generate a quiz from this image. Extract text and concepts for educational questions."
-        : `Generate a quiz from this material: \n\n ${content.substring(0, 15000)}`;
+        ? "Analyze this image and create a quiz based on its educational content."
+        : `Generate a comprehensive quiz from this material: \n\n ${content.substring(0, 15000)}`;
 
       const parts: any[] = [{ text: promptText }];
       
       if (isImage) {
-        // Handle potential base64 prefix
         const base64Data = content.includes('base64,') ? content.split(',')[1] : content;
         parts.push({
           inlineData: { mimeType: "image/jpeg", data: base64Data }
         });
       }
 
-      // SDK requires 'contents' to be an array of Content objects
+      // Fix: contents must be an object with parts, or an array of such objects without role conflicts in single-turn
       const response = await this.ai.models.generateContent({
         model: modelName,
-        contents: [{ role: 'user', parts }],
+        contents: { parts },
         config: {
           systemInstruction,
           responseMimeType: "application/json",
-          temperature: 0.2,
+          temperature: 0.3,
           responseSchema: {
             type: Type.OBJECT,
             properties: {
@@ -72,7 +73,7 @@ export class GeminiService {
                   type: Type.OBJECT,
                   properties: {
                     id: { type: Type.STRING },
-                    type: { type: Type.STRING },
+                    type: { type: Type.STRING, description: "MCQ, TF, or FITB" },
                     prompt: { type: Type.STRING },
                     options: { type: Type.ARRAY, items: { type: Type.STRING } },
                     correctAnswer: { type: Type.STRING },
@@ -89,20 +90,13 @@ export class GeminiService {
 
       if (!response || !response.text) throw new Error("EMPTY_AI_RESPONSE");
 
-      let cleanJson = response.text.trim();
-      // Remove markdown blocks if present
-      if (cleanJson.startsWith('```')) {
-        cleanJson = cleanJson.replace(/^```json\n?/, '').replace(/\n?```$/, '');
-      }
-
-      const result = JSON.parse(cleanJson);
+      const result = JSON.parse(response.text.trim());
       return {
         questions: result.questions,
         language: result.language || lang
       };
     } catch (error: any) {
-      console.error("GeminiService Error:", error);
-      // Fallback for UI
+      console.error("Gemini Generation Failed:", error);
       throw new Error(error.message || "FAILED_TO_GENERATE_QUIZ");
     }
   }

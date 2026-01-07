@@ -1,6 +1,6 @@
 
 export type QuestionType = 'MCQ' | 'TF' | 'FITB';
-export type Difficulty = 'easy' | 'medium' | 'hard';
+export type Difficulty = 'easy' | 'medium' | 'hard' | 'mixed';
 export type QuizSource = 'ai' | 'manual';
 
 export interface QuizSettings {
@@ -19,7 +19,6 @@ export interface Question {
   explanation?: string;
 }
 
-// Added QuizAttempt interface to fix Error in file hooks/useQuizEngine.ts
 export interface QuizAttempt {
   questionId: string;
   attempts: number;
@@ -42,7 +41,6 @@ export interface QuizResult {
   score: number;
   totalQuestions: number;
   percentage: number;
-  // Updated attempts type for consistency
   attempts: QuizAttempt[];
 }
 

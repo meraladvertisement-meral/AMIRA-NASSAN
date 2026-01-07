@@ -84,7 +84,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
         setContent(result);
         setProcessing(false);
       } else {
-        setContent("Processing PDF content: " + file.name);
+        setContent("Content from PDF: " + file.name);
         setActiveTab('text');
         setProcessing(false);
       }
@@ -137,7 +137,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-black uppercase text-brand-lime">{t.inputTitle}</h2>
         <button onClick={onBack} className="glass px-4 py-2 rounded-xl text-sm font-bold active:scale-95 transition-all">
-          {t.home || 'Home'}
+          ← {t.home}
         </button>
       </div>
 
@@ -194,9 +194,30 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
           <GlassCard className="space-y-6 border-white/20">
             <div>
               <label className="block text-[10px] font-black mb-2 uppercase text-white/40 tracking-[0.2em]">{t.difficulty}</label>
-              <div className="flex gap-2">
-                {(['easy', 'medium', 'hard'] as Difficulty[]).map(d => (
-                  <button key={d} onClick={() => updateDifficulty(d)} className={`flex-1 py-2 rounded-xl font-bold border-2 transition ${settings.difficulty === d ? 'border-brand-lime bg-brand-lime/20 text-brand-lime' : 'border-white/10 text-white/40'}`}>{t[d]}</button>
+              <div className="grid grid-cols-2 gap-2">
+                {(['easy', 'medium', 'hard', 'mixed'] as Difficulty[]).map(d => (
+                  <button 
+                    key={d} 
+                    onClick={() => updateDifficulty(d)} 
+                    className={`py-2 rounded-xl font-bold border-2 transition ${settings.difficulty === d ? 'border-brand-lime bg-brand-lime/20 text-brand-lime' : 'border-white/10 text-white/40'}`}
+                  >
+                    {t[d] || d}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-black mb-2 uppercase text-white/40 tracking-[0.2em]">{t.types}</label>
+              <div className="flex flex-wrap gap-2">
+                {(['MCQ', 'TF', 'FITB'] as QuestionType[]).map(type => (
+                  <button 
+                    key={type} 
+                    onClick={() => toggleType(type)} 
+                    className={`flex-1 min-w-[80px] py-2 rounded-xl font-bold border-2 transition ${settings.types.includes(type) ? 'border-brand-purple bg-brand-purple/20 text-brand-purple' : 'border-white/10 text-white/40'}`}
+                  >
+                    {t[type.toLowerCase()] || type}
+                  </button>
                 ))}
               </div>
             </div>
@@ -204,7 +225,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
             <div>
               <label className="block text-[10px] font-black mb-2 uppercase text-white/40 tracking-[0.2em] flex justify-between">
                 <span>{t.questionCount}</span>
-                <span className="text-brand-lime text-sm">{settings.questionCount}</span>
+                <span className="text-brand-lime text-sm font-black">{settings.questionCount}</span>
               </label>
               <input type="range" min="5" max="20" step="1" value={settings.questionCount} onChange={(e) => setSettings({...settings, questionCount: parseInt(e.target.value)})} className="w-full accent-brand-lime cursor-pointer" />
             </div>

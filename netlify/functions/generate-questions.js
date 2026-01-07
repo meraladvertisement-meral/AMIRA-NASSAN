@@ -46,10 +46,14 @@ exports.handler = async (event, context) => {
     const model = "gemini-3-flash-preview";
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
+    const difficultyDesc = settings.difficulty === 'mixed' 
+      ? 'a balanced mix of easy, medium, and hard questions' 
+      : settings.difficulty;
+
     const systemPrompt = `Task: Create a high-quality educational quiz.
     Strict Rules:
     - Language: ${language === 'de' ? 'German' : 'English'}
-    - Difficulty: ${settings.difficulty || 'medium'}
+    - Difficulty: ${difficultyDesc}
     - Count: ${settings.questionCount || 10}
     - Types: ${(settings.types || ['MCQ']).join(", ")}
     - Output MUST be valid JSON.

@@ -3,7 +3,7 @@ export type Language = 'en' | 'de';
 
 export const translations = {
   en: {
-    // ... (Keep existing)
+    mixed: "Mixed",
     guestLimitReached: "Guest daily limit (5 plays) reached. Please sign in to play more!",
     playsRemaining: "Plays Remaining Today",
     appName: "SnapQuizGame",
@@ -95,6 +95,7 @@ export const translations = {
     opponentConnected: "Opponent Connected!"
   },
   de: {
+    mixed: "Gemischt",
     guestLimitReached: "Tageslimit für Gäste (5 Spiele) erreicht. Bitte anmelden!",
     playsRemaining: "Verbleibende Spiele heute",
     appName: "SnapQuizGame",
@@ -151,7 +152,7 @@ export const translations = {
     noHistory: "Noch keine Quizzes",
     languageNotice: "Quizzes werden in der Sprache des von Ihnen bereitgestellten Textes erstellt.",
     referralTitle: "Empfehlungsboni",
-    referralDesc: "Erhalte +2 Spiele für jeden gewورbenen Freund!",
+    referralDesc: "Erhalte +2 Spiele für jeden geworbenen Freund!",
     plans: "Pläne",
     buyPacks: "Spielpakete kaufen",
     activations: "Aktivierungen",
