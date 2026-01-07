@@ -33,20 +33,28 @@ export class GeminiService {
         signal
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Server Error: ${response.status}`);
+      const contentType = response.headers.get("content-type");
+      let result;
+      
+      if (contentType && contentType.includes("application/json")) {
+        result = await response.json();
+      } else {
+        const text = await response.text();
+        console.error("Non-JSON Response received:", text);
+        throw new Error(text || "Server returned an invalid response format.");
       }
 
-      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.message || result.error || `Server Error: ${response.status}`);
+      }
       
       if (!result.questions || !Array.isArray(result.questions)) {
-        throw new Error("INVALID_FORMAT");
+        throw new Error("The AI response was empty or malformed.");
       }
 
       return {
         questions: result.questions,
-        language: result.language || lang
+        language: lang
       };
     } catch (error: any) {
       console.error("Quiz Generation Failed:", error);

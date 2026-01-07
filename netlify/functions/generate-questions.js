@@ -9,54 +9,61 @@ exports.handler = async (event, context) => {
     'Content-Type': 'application/json'
   };
 
+  // Preflight-Check für CORS
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
   }
 
   try {
-    const { content, settings, isImage, language } = JSON.parse(event.body);
-    
     const apiKey = process.env.API_KEY;
-    if (!apiKey) {
+    if (!apiKey || apiKey === "YOUR_API_KEY_HERE") {
       return { 
         statusCode: 500, 
         headers, 
-        body: JSON.stringify({ error: "Missing API_KEY in Netlify environment variables." }) 
+        body: JSON.stringify({ error: "CONFIG_ERROR", message: "API_KEY environment variable is missing on Netlify." }) 
       };
     }
 
+    // Body korrekt parsen (Netlify kann den Body manchmal base64-kodiert senden)
+    let body;
+    try {
+      const rawBody = event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString() : event.body;
+      body = JSON.parse(rawBody);
+    } catch (e) {
+      return { 
+        statusCode: 400, 
+        headers, 
+        body: JSON.stringify({ error: "INVALID_REQUEST", message: "Failed to parse request body." }) 
+      };
+    }
+
+    const { content, settings, isImage, language } = body;
     const ai = new GoogleGenAI({ apiKey });
     
     const difficultyDesc = settings.difficulty === 'mixed' 
       ? 'a balanced mix of easy, medium, and hard questions' 
       : settings.difficulty;
 
-    const systemInstruction = `You are a world-class educational content creator.
-    Generate a quiz in ${language === 'de' ? 'German' : 'English'}.
+    const systemInstruction = `You are an expert educator. Generate a quiz in ${language === 'de' ? 'German' : 'English'}.
+    Return ONLY a JSON object. No markdown, no backticks, just the raw JSON.
     
-    RULES:
-    - Count: ${settings.questionCount || 10} questions.
-    - Difficulty: ${difficultyDesc}.
-    - Types: ${(settings.types || ['MCQ']).join(", ")}.
-    - FITB (Fill-in-the-blanks): The 'prompt' must contain '_______'. 'correctAnswer' is the word. 'options' must be 3 plausible but wrong distractors.
-    - MCQ: 'options' must be 4 choices. 'correctAnswer' must be one of them.
-    - Return ONLY valid JSON matching the schema.`;
+    Structure:
+    - Count: ${settings.questionCount || 10}
+    - Difficulty: ${difficultyDesc}
+    - Types: ${(settings.types || ['MCQ']).join(", ")}
+    - FITB: prompt must have '_______'. options: 3 distractors.
+    - MCQ: options: 4 choices.`;
 
     const promptText = isImage 
-      ? "Analyze this image and create an educational quiz based on its contents."
-      : `Generate a quiz based on this content: ${content.substring(0, 15000)}`;
+      ? "Create a quiz based on this image."
+      : `Create a quiz based on: ${content.substring(0, 10000)}`;
 
-    const contents = [{
-      parts: [{ text: promptText }]
-    }];
+    const contents = [{ parts: [{ text: promptText }] }];
 
     if (isImage) {
       const base64Data = content.includes('base64,') ? content.split(',')[1] : content;
       contents[0].parts.push({
-        inlineData: {
-          mimeType: "image/jpeg",
-          data: base64Data
-        }
+        inlineData: { mimeType: "image/jpeg", data: base64Data }
       });
     }
 
@@ -66,24 +73,19 @@ exports.handler = async (event, context) => {
       config: {
         systemInstruction,
         responseMimeType: "application/json",
-        temperature: 0.4,
+        temperature: 0.7,
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            language: { type: Type.STRING },
             questions: {
               type: Type.ARRAY,
               items: {
                 type: Type.OBJECT,
                 properties: {
                   id: { type: Type.STRING },
-                  type: { type: Type.STRING, description: "MCQ, TF, or FITB" },
+                  type: { type: Type.STRING },
                   prompt: { type: Type.STRING },
-                  options: { 
-                    type: Type.ARRAY, 
-                    items: { type: Type.STRING },
-                    description: "3 distractors for FITB, or 4 options for MCQ"
-                  },
+                  options: { type: Type.ARRAY, items: { type: Type.STRING } },
                   correctAnswer: { type: Type.STRING },
                   explanation: { type: Type.STRING }
                 },
@@ -91,29 +93,32 @@ exports.handler = async (event, context) => {
               }
             }
           },
-          required: ["language", "questions"]
+          required: ["questions"]
         }
       },
     });
 
-    const outputText = response.text;
+    let jsonString = response.text || "";
     
+    // Bereinigung: Falls die KI trotzdem ```json ... ``` zurückgibt
+    if (jsonString.includes("```")) {
+      jsonString = jsonString.replace(/```json/g, "").replace(/```/g, "").trim();
+    }
+
     return {
       statusCode: 200,
       headers,
-      body: outputText
+      body: jsonString
     };
 
   } catch (error) {
-    console.error("Netlify Function Error Details:", error);
-    // Return the actual error message for better debugging
+    console.error("Netlify Error:", error);
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({ 
         error: "GENERATION_FAILED", 
-        message: error.message,
-        details: error.stack?.split('\n')[0]
+        message: error.message || "Unknown error during AI generation."
       })
     };
   }

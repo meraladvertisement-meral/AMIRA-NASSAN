@@ -78,6 +78,11 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
     }
   };
 
+  // Capture selection states before TypeScript narrows 'creationMode' via early return.
+  // This prevents errors where comparisons like creationMode === 'manual' are flagged as impossible.
+  const isAiActive = creationMode === 'ai';
+  const isManualActive = creationMode === 'manual';
+
   if (creationMode === 'manual') {
     return (
       <div className="p-6 max-w-2xl mx-auto min-h-screen">
@@ -103,13 +108,13 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
       <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 shadow-inner">
         <button 
           onClick={() => setCreationMode('ai')}
-          className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${creationMode === 'ai' ? 'bg-white text-brand-dark shadow-xl scale-[1.02]' : 'text-white/40 hover:text-white/60'}`}
+          className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${isAiActive ? 'bg-white text-brand-dark shadow-xl scale-[1.02]' : 'text-white/40 hover:text-white/60'}`}
         >
           🤖 AI Generate
         </button>
         <button 
           onClick={() => setCreationMode('manual')}
-          className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${creationMode === 'manual' ? 'bg-white text-brand-dark shadow-xl scale-[1.02]' : 'text-white/40 hover:text-white/60'}`}
+          className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${isManualActive ? 'bg-white text-brand-dark shadow-xl scale-[1.02]' : 'text-white/40 hover:text-white/60'}`}
         >
           ✍️ Manual Creator
         </button>
