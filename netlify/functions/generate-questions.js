@@ -16,13 +16,12 @@ exports.handler = async (event, context) => {
   try {
     const { content, settings, isImage, language } = JSON.parse(event.body);
     
-    // استخدام المفتاح من بيئة Netlify حصراً
     const apiKey = process.env.API_KEY;
     if (!apiKey) {
       return { 
         statusCode: 500, 
         headers, 
-        body: JSON.stringify({ error: "Missing API_KEY in environment variables." }) 
+        body: JSON.stringify({ error: "Missing API_KEY in Netlify environment variables." }) 
       };
     }
 
@@ -41,10 +40,10 @@ exports.handler = async (event, context) => {
     - Types: ${(settings.types || ['MCQ']).join(", ")}.
     - FITB (Fill-in-the-blanks): The 'prompt' must contain '_______'. 'correctAnswer' is the word. 'options' must be 3 plausible but wrong distractors.
     - MCQ: 'options' must be 4 choices. 'correctAnswer' must be one of them.
-    - Return ONLY valid JSON.`;
+    - Return ONLY valid JSON matching the schema.`;
 
     const promptText = isImage 
-      ? "Analyze this image and create a quiz based on its educational content."
+      ? "Analyze this image and create an educational quiz based on its contents."
       : `Generate a quiz based on this content: ${content.substring(0, 15000)}`;
 
     const contents = [{
@@ -67,7 +66,7 @@ exports.handler = async (event, context) => {
       config: {
         systemInstruction,
         responseMimeType: "application/json",
-        temperature: 0.3,
+        temperature: 0.4,
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -83,7 +82,7 @@ exports.handler = async (event, context) => {
                   options: { 
                     type: Type.ARRAY, 
                     items: { type: Type.STRING },
-                    description: "For FITB, these are distractors for the 2nd attempt."
+                    description: "3 distractors for FITB, or 4 options for MCQ"
                   },
                   correctAnswer: { type: Type.STRING },
                   explanation: { type: Type.STRING }
@@ -106,13 +105,15 @@ exports.handler = async (event, context) => {
     };
 
   } catch (error) {
-    console.error("Netlify Function Error:", error);
+    console.error("Netlify Function Error Details:", error);
+    // Return the actual error message for better debugging
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({ 
         error: "GENERATION_FAILED", 
-        message: error.message 
+        message: error.message,
+        details: error.stack?.split('\n')[0]
       })
     };
   }

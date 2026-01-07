@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { AppScreen, GameMode, QuizSettings, QuizRecord, QuizResult } from './types/quiz';
+import { AppScreen, GameMode, QuizSettings, QuizRecord, QuizResult, Question } from './types/quiz';
 import { Language, translations } from './i18n';
 import { useAudio } from './hooks/useAudio';
 import { GeminiService } from './services/geminiService';
@@ -51,7 +51,6 @@ export default function App() {
   const audio = useAudio();
   const t = useMemo(() => translations[lang], [lang]);
 
-  // التحقق من الرابط - معدل ليكون مستقلاً عن حالة تسجيل الدخول
   const checkJoinParams = () => {
     const params = new URLSearchParams(window.location.search);
     const joinCode = params.get('join');
@@ -74,14 +73,12 @@ export default function App() {
         setIsAdmin(isUserAdmin);
         localStorage.setItem('sqg_mode', isUserAdmin ? 'admin' : 'user');
         
-        // إذا لم يكن هناك كود انضمام، اذهب للرئيسية
         if (!hasJoinCode) setScreen('HOME');
       } else {
-        // إذا كان هناك كود انضمام، اتركه على صفحة الانضمام
         if (hasJoinCode) {
           setScreen('JOIN_ROOM');
         } else if (savedMode === 'guest') {
-          handleGuestLogin(false); // استعادة حالة الضيف بدون إعادة التوجيه
+          handleGuestLogin(false);
           setScreen('HOME');
         } else if (savedMode === 'admin') {
           setUser({ uid: 'admin-001', displayName: 'System Admin' });
@@ -160,6 +157,31 @@ export default function App() {
     }
   };
 
+  const handleStartManual = async (questions: Question[]) => {
+    const newQuiz: QuizRecord = {
+      id: Math.random().toString(36).substr(2, 9),
+      createdAt: Date.now(),
+      questionLanguage: lang,
+      settings: { ...settings, questionCount: questions.length },
+      questions: questions,
+      source: 'manual'
+    };
+    setQuiz(newQuiz);
+    
+    if (mode === GameMode.SOLO) {
+      setScreen('READY');
+    } else {
+      setScreen('LOADING');
+      try {
+        const { sessionId } = await roomService.createSession(newQuiz, mode);
+        setActiveRoomId(sessionId);
+        setScreen('ROOM_LOBBY');
+      } catch (err: any) {
+        setLoadingError("Failed to create multiplayer session.");
+      }
+    }
+  };
+
   if (isAuthLoading) return null;
 
   return (
@@ -172,7 +194,7 @@ export default function App() {
         <HomePage onSelectMode={(m) => { setMode(m); setScreen('CONFIG'); }} onJoinDuel={() => setScreen('JOIN_ROOM')} onHistory={() => setScreen('HISTORY')} onPricing={() => setScreen('PRICING')} onAffiliate={() => setScreen('AFFILIATE')} onInfoCenter={() => setScreen('INFO_CENTER')} onLogout={handleLogout} onQuickSnap={() => {}} t={t} audio={audio} isGuest={isGuest} demoUsed={false} isAdmin={isAdmin} />
       )}
 
-      {screen === 'CONFIG' && <ConfigPage settings={settings} setSettings={setSettings} onStart={handleStartQuiz} onStartManual={() => {}} onBack={() => setScreen('HOME')} t={t} />}
+      {screen === 'CONFIG' && <ConfigPage settings={settings} setSettings={setSettings} onStart={handleStartQuiz} onStartManual={handleStartManual} onBack={() => setScreen('HOME')} t={t} />}
       {screen === 'ROOM_LOBBY' && activeRoomId && <RoomLobbyPage roomId={activeRoomId} onStart={() => setScreen('ARENA')} onBack={() => setScreen('HOME')} t={t} />}
       {screen === 'JOIN_ROOM' && <JoinRoomPage onJoinSuccess={(rid) => { setActiveRoomId(rid); setScreen('ROOM_LOBBY'); }} onBack={() => (user ? setScreen('HOME') : setScreen('LANDING'))} t={t} />}
       {screen === 'LOADING' && <LoadingPage t={t} error={loadingError} onCancel={() => setScreen('CONFIG')} onRetry={() => setScreen('CONFIG')} onBack={() => setScreen('CONFIG')} />}
