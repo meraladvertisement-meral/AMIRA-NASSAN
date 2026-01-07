@@ -82,4 +82,5 @@ export type AppScreen =
   | 'AFFILIATE'
   | 'INFO_CENTER'
   | 'ROOM_LOBBY'
-  | 'JOIN_ROOM';
+  | 'JOIN_ROOM'
+  | 'LEADERBOARD';

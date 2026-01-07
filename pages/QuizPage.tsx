@@ -5,19 +5,20 @@ import { useQuizEngine } from '../hooks/useQuizEngine';
 import { GlassCard } from '../components/layout/GlassCard';
 import { ThreeDButton } from '../components/layout/ThreeDButton';
 import { Timer } from '../components/quiz/Timer';
+import { roomService } from '../services/roomService';
+import { auth } from '../services/firebase';
 
 interface QuizPageProps {
   quiz: QuizRecord;
   onComplete: (result: QuizResult) => void;
   onQuit: () => void;
-  onProgress?: (index: number, score: number) => void;
-  opponentProgress?: { index: number; score: number; finished: boolean };
   mode?: GameMode;
+  roomId?: string;
   t: any;
   audio: any;
 }
 
-const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, onProgress, opponentProgress, mode, t, audio }) => {
+const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, mode, roomId, t, audio }) => {
   const isTimeMode = mode === GameMode.DUEL || mode === GameMode.TEACHER;
   const timePerQuestion = isTimeMode ? 20 : undefined;
 
@@ -52,9 +53,15 @@ const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, onProgres
     };
   }, [audio]);
 
+  // Sync progress to Firebase for multi-player modes
   useEffect(() => {
-    onProgress?.(currentIndex, score);
-  }, [currentIndex, score, onProgress]);
+    if (roomId && (mode === GameMode.TEACHER || mode === GameMode.DUEL)) {
+      const uid = auth.currentUser?.uid || localStorage.getItem('sqg_guest_uid');
+      if (uid) {
+        roomService.updatePlayerProgress(roomId, uid, score, currentIndex, isFinished);
+      }
+    }
+  }, [currentIndex, score, isFinished, roomId, mode]);
 
   const onChoice = (choice: string) => {
     if (feedback.selected) return; 
@@ -160,24 +167,6 @@ const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, onProgres
             style={{ width: `${((currentIndex + 1) / quiz.questions.length) * 100}%` }}
           ></div>
         </div>
-        
-        {opponentProgress && (
-          <div className="flex items-center gap-3 glass p-3 rounded-2xl border-brand-purple/20 bg-brand-purple/5 shadow-xl animate-in fade-in duration-1000">
-             <div className="flex flex-col">
-                <span className="text-[8px] font-black text-brand-purple uppercase tracking-widest opacity-60">Opponent</span>
-                <span className="text-[10px] font-black text-white/80 uppercase">{opponentProgress.score} pts</span>
-             </div>
-             <div className="flex-1 bg-black/30 h-1 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-brand-purple transition-all duration-1000 ease-in-out shadow-[0_0_10px_rgba(107,33,168,0.4)]"
-                  style={{ width: `${((opponentProgress.index + (opponentProgress.finished ? 0 : 1)) / quiz.questions.length) * 100}%` }}
-                ></div>
-             </div>
-             {opponentProgress.finished && (
-               <span className="text-[8px] font-black bg-brand-purple text-white px-2 py-0.5 rounded-full uppercase animate-pulse">Done</span>
-             )}
-          </div>
-        )}
       </div>
 
       {/* Question Card */}
@@ -250,9 +239,6 @@ const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, onProgres
           )}
         </div>
       </GlassCard>
-
-      <div className="fixed top-[-10%] right-[-10%] w-[500px] h-[500px] bg-brand-purple opacity-[0.05] blur-[120px] pointer-events-none -z-10"></div>
-      <div className="fixed bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-brand-lime opacity-[0.03] blur-[120px] pointer-events-none -z-10"></div>
 
       <style>{`
         @keyframes pulse-fast {

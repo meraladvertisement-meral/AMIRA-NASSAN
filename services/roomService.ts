@@ -8,7 +8,9 @@ import {
   collection, 
   serverTimestamp,
   runTransaction,
-  Timestamp
+  Timestamp,
+  query,
+  orderBy
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { db, auth } from "./firebase";
 import { QuizRecord } from "../types/quiz";
@@ -24,7 +26,10 @@ export const roomService = {
   },
 
   async createSession(quiz: QuizRecord, mode: any): Promise<{ sessionId: string, joinCode: string }> {
-    const user = auth.currentUser || { uid: localStorage.getItem('sqg_mode') === 'admin' ? 'admin-001' : 'guest-123' };
+    const user = auth.currentUser || { 
+      uid: localStorage.getItem('sqg_guest_uid') || 'host-' + Math.random().toString(36).substr(2, 5),
+      displayName: localStorage.getItem('sqg_mode') === 'admin' ? 'System Admin' : 'Host'
+    };
     
     const sessionId = Math.random().toString(36).substring(2, 15);
     const joinCode = this.generateJoinCode();
@@ -33,6 +38,7 @@ export const roomService = {
     await runTransaction(db, async (transaction) => {
       const codeRef = doc(db, "joinCodes", joinCode);
       const sessionRef = doc(db, "sessions", sessionId);
+      const playerRef = doc(db, "sessions", sessionId, "players", user.uid);
 
       const sessionData = {
         id: sessionId,
@@ -48,6 +54,16 @@ export const roomService = {
 
       transaction.set(codeRef, { sessionId, expiresAt: Timestamp.fromDate(expiresAt) });
       transaction.set(sessionRef, sessionData);
+      
+      // Add Host as the first player in the collection
+      transaction.set(playerRef, {
+        uid: user.uid,
+        displayName: user.displayName || "Host",
+        status: 'active',
+        score: 0,
+        progress: 0,
+        joinedAt: Timestamp.now()
+      });
     });
 
     return { sessionId, joinCode };
@@ -63,10 +79,9 @@ export const roomService = {
   },
 
   async joinSession(sessionId: string) {
-    // محاولة الحصول على مستخدم Firebase أو استخدام مستخدم محلي (للضيوف)
     const user = auth.currentUser || { 
-      uid: 'guest-' + Math.random().toString(36).substr(2, 5),
-      displayName: 'Guest Player'
+      uid: localStorage.getItem('sqg_guest_uid') || 'guest-' + Math.random().toString(36).substr(2, 5),
+      displayName: 'Player'
     };
 
     const sessionRef = doc(db, "sessions", sessionId);
@@ -82,7 +97,17 @@ export const roomService = {
       displayName: user.displayName || "Player",
       status: 'active',
       score: 0,
+      progress: 0,
       joinedAt: serverTimestamp()
+    });
+  },
+
+  async updatePlayerProgress(sessionId: string, uid: string, score: number, progress: number, finished: boolean = false) {
+    const playerRef = doc(db, "sessions", sessionId, "players", uid);
+    await updateDoc(playerRef, {
+      score,
+      progress,
+      status: finished ? 'finished' : 'active'
     });
   },
 
@@ -93,7 +118,8 @@ export const roomService = {
   },
 
   subscribeToPlayers(sessionId: string, callback: (players: any[]) => void) {
-    return onSnapshot(collection(db, "sessions", sessionId, "players"), (snap) => {
+    const q = query(collection(db, "sessions", sessionId, "players"), orderBy("score", "desc"));
+    return onSnapshot(q, (snap) => {
       const players = snap.docs.map(d => d.data());
       callback(players);
     });

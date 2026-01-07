@@ -8,11 +8,13 @@ interface ResultPageProps {
   result: QuizResult;
   onHome: () => void;
   onBalloon: () => void;
+  onLeaderboard: () => void;
+  showLeaderboardBtn?: boolean;
   t: any;
   audio: any;
 }
 
-const ResultPage: React.FC<ResultPageProps> = ({ result, onHome, onBalloon, t, audio }) => {
+const ResultPage: React.FC<ResultPageProps> = ({ result, onHome, onBalloon, onLeaderboard, showLeaderboardBtn, t, audio }) => {
   const isWinner = result.percentage >= 60;
 
   useEffect(() => {
@@ -22,18 +24,18 @@ const ResultPage: React.FC<ResultPageProps> = ({ result, onHome, onBalloon, t, a
   return (
     <div className="p-6 max-w-lg mx-auto min-h-screen flex flex-col justify-center gap-6">
       <div className="text-center">
-        <h2 className="text-5xl font-black italic mb-2 text-white drop-shadow-lg">
+        <h2 className="text-5xl font-black italic mb-2 text-white drop-shadow-lg animate-in zoom-in duration-500">
           {isWinner ? 'AMAZING!' : 'GOOD TRY!'}
         </h2>
-        <p className="text-brand-lime font-bold tracking-widest uppercase">Quiz Completed</p>
+        <p className="text-brand-lime font-bold tracking-widest uppercase animate-pulse">Quiz Completed</p>
       </div>
 
-      <GlassCard className="text-center py-10">
-        <div className="text-7xl font-black mb-2 text-brand-gold">
+      <GlassCard className="text-center py-10 border-white/20">
+        <div className="text-7xl font-black mb-2 text-brand-gold drop-shadow-[0_0_20px_rgba(245,158,11,0.3)]">
           {Math.round(result.percentage)}%
         </div>
         <p className="text-xl font-bold text-white/70">
-          {result.score} / {result.totalQuestions} Correct
+          {result.score} / {result.totalQuestions} {t.score || 'Correct'}
         </p>
       </GlassCard>
 
@@ -43,8 +45,15 @@ const ResultPage: React.FC<ResultPageProps> = ({ result, onHome, onBalloon, t, a
             🎈 {t.balloonHero}
           </ThreeDButton>
         )}
-        <ThreeDButton variant="primary" className="w-full" onClick={onHome}>
-          {t.home}
+        
+        {showLeaderboardBtn && (
+          <ThreeDButton variant="primary" className="w-full py-5 text-xl bg-brand-lime" onClick={onLeaderboard}>
+            🏆 {t.appName === 'SnapQuizGame' ? 'View Leaderboard' : 'لوحة الصدارة'}
+          </ThreeDButton>
+        )}
+
+        <ThreeDButton variant="secondary" className="w-full py-4 opacity-80" onClick={onHome}>
+          🏠 {t.home}
         </ThreeDButton>
       </div>
     </div>

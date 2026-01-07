@@ -27,6 +27,7 @@ import AffiliatePage from './pages/AffiliatePage';
 import InfoCenterPage from './info_center/InfoCenterPage';
 import JoinRoomPage from './pages/JoinRoomPage';
 import RoomLobbyPage from './pages/RoomLobbyPage';
+import LeaderboardPage from './pages/LeaderboardPage';
 
 export default function App() {
   const [screen, setScreen] = useState<AppScreen>('LANDING');
@@ -107,9 +108,9 @@ export default function App() {
     localStorage.setItem('sqg_mode', 'guest');
     setIsGuest(true);
     setIsAdmin(false);
-    const guestUid = 'guest-' + Math.random().toString(36).substr(2, 5);
+    const guestUid = localStorage.getItem('sqg_guest_uid') || 'guest-' + Math.random().toString(36).substr(2, 5);
     localStorage.setItem('sqg_guest_uid', guestUid);
-    setUser({ uid: guestUid, displayName: 'Guest Explorer' });
+    setUser({ uid: guestUid, displayName: 'Guest Player' });
     if (redirect && !checkJoinParams()) setScreen('HOME');
   };
 
@@ -202,9 +203,17 @@ export default function App() {
       {screen === 'ROOM_LOBBY' && activeRoomId && (
         <RoomLobbyPage 
           roomId={activeRoomId} 
-          onStart={(roomQuiz) => {
+          onStart={(roomQuiz, hostUid) => {
             setQuiz(roomQuiz);
-            setScreen('ARENA');
+            const myUid = auth.currentUser?.uid || localStorage.getItem('sqg_guest_uid');
+            // Fix: Access hostUid from the callback arguments instead of the QuizRecord
+            const isHost = hostUid === myUid || isAdmin; // Simple check
+            // If mode is Teacher and I am host, go directly to Leaderboard
+            if (isHost && mode === GameMode.TEACHER) {
+              setScreen('LEADERBOARD');
+            } else {
+              setScreen('ARENA');
+            }
           }} 
           onBack={() => setScreen('HOME')} 
           t={t} 
@@ -214,8 +223,46 @@ export default function App() {
       {screen === 'JOIN_ROOM' && <JoinRoomPage onJoinSuccess={(rid) => { setActiveRoomId(rid); setScreen('ROOM_LOBBY'); }} onBack={() => (user ? setScreen('HOME') : setScreen('LANDING'))} t={t} />}
       {screen === 'LOADING' && <LoadingPage t={t} error={loadingError} onCancel={() => setScreen('CONFIG')} onRetry={() => setScreen('CONFIG')} onBack={() => setScreen('CONFIG')} />}
       {screen === 'READY' && quiz && <ReadyPage quiz={quiz} onStart={() => setScreen('ARENA')} onBack={() => setScreen('CONFIG')} t={t} />}
-      {screen === 'ARENA' && quiz && <QuizPage quiz={quiz} mode={mode} onComplete={(res) => { setResult(res); setScreen('RESULT'); }} onQuit={() => setScreen('HOME')} t={t} audio={audio} />}
-      {screen === 'RESULT' && result && <ResultPage result={result} onHome={() => setScreen('HOME')} onBalloon={() => setScreen('BALLOON')} t={t} audio={audio} />}
+      
+      {screen === 'ARENA' && quiz && (
+        <QuizPage 
+          quiz={quiz} 
+          mode={mode} 
+          roomId={activeRoomId || undefined}
+          onComplete={(res) => { 
+            setResult(res); 
+            setScreen('RESULT');
+          }} 
+          onQuit={() => setScreen('HOME')} 
+          t={t} 
+          audio={audio} 
+        />
+      )}
+
+      {screen === 'RESULT' && result && (
+        <ResultPage 
+          result={result} 
+          onHome={() => setScreen('HOME')} 
+          onBalloon={() => setScreen('BALLOON')} 
+          onLeaderboard={() => setScreen('LEADERBOARD')}
+          showLeaderboardBtn={mode !== GameMode.SOLO && !!activeRoomId}
+          t={t} 
+          audio={audio} 
+        />
+      )}
+
+      {screen === 'LEADERBOARD' && activeRoomId && (
+        <LeaderboardPage 
+          roomId={activeRoomId} 
+          quiz={quiz!} 
+          isWinner={result ? result.percentage >= 60 : false} 
+          onHome={() => setScreen('HOME')} 
+          onBalloon={() => setScreen('BALLOON')} 
+          t={t} 
+          audio={audio} 
+        />
+      )}
+
       {screen === 'BALLOON' && <BalloonGame onComplete={() => setScreen('HOME')} t={t} audio={audio} />}
       {screen === 'HISTORY' && <HistoryPage onSelectQuiz={(q) => { setQuiz(q); setScreen('READY'); }} onBack={() => setScreen('HOME')} t={t} />}
       {screen === 'PRICING' && <PricingPage onBack={() => setScreen('HOME')} t={t} />}

@@ -8,7 +8,7 @@ import { QuizRecord } from '../types/quiz';
 
 interface RoomLobbyPageProps {
   roomId: string;
-  onStart: (quiz: QuizRecord) => void;
+  onStart: (quiz: QuizRecord, hostUid: string) => void;
   onBack: () => void;
   t: any;
 }
@@ -29,7 +29,8 @@ const RoomLobbyPage: React.FC<RoomLobbyPageProps> = ({ roomId, onStart, onBack, 
       setRoom(data);
       // If the game has started in the database, trigger the start UI for everyone
       if (data.status === 'started' && data.quizSnapshot) {
-        onStart(data.quizSnapshot);
+        // Fix: Pass both quiz snapshot and hostUid to the start handler
+        onStart(data.quizSnapshot, data.hostUid);
       }
     });
 
