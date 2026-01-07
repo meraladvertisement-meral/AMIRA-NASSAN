@@ -2,54 +2,46 @@
 import { jsPDF } from 'jspdf';
 import { QuizRecord } from '../types/quiz';
 
-const pxPerMm = 3.78; // Standard conversion factor for 96 DPI
-// Regex for Arabic, Persian, and related RTL scripts
-const ARABIC_REGEX = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/;
+const pxPerMm = 3.78; // 96 DPI standard
+// Robust regex for Arabic script characters including presentation forms
+const ARABIC_REGEX = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
 
-/**
- * pdfService handles the generation of printable Exam PDFs.
- * Updated: 
- * - Precise RTL detection for Arabic script ranges.
- * - Latin/Turkish correctly forced to LTR.
- * - Sanitization to prevent jsPDF crashes on emojis/unsupported Unicode.
- */
 export const pdfService = {
   /**
-   * Detects if a string contains characters that jsPDF standard fonts cannot handle (non-Latin-1).
+   * Determines if the text contains characters requiring Canvas-based rendering
+   * (e.g., Arabic, special Turkish characters, or Emojis).
    */
   needsImageRendering(text: string): boolean {
     if (!text) return false;
-    // Detects anything outside standard ISO-8859-1 (Latin-1)
-    // This includes Arabic, Turkish special chars, Emojis, etc.
-    return /[^\x00-\xFF]/.test(text);
+    // Use Canvas for any character outside standard Latin-1 or specific RTL scripts
+    return /[^\x00-\xFF]/.test(text) || ARABIC_REGEX.test(text);
   },
 
   /**
-   * Renders text to a Data URL via Canvas to handle complex scripts like Arabic (Shaping + RTL).
+   * Renders complex scripts to a high-resolution PNG via Canvas for inclusion in the PDF.
+   * Handles RTL shaping, bidi text, and word wrapping.
    */
   renderComplexTextToImage(text: string, maxWidthMm: number, fontPx: number, isBold: boolean): { dataUrl: string, wMm: number, hMm: number } | null {
     if (!text || !text.trim()) return null;
 
+    const isRtl = ARABIC_REGEX.test(text);
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
 
-    const maxWidthPx = Math.max(1, maxWidthMm * pxPerMm);
+    // Use a scale factor for high-resolution (Retina-like) text quality in the PDF
+    const scaleFactor = 3; 
+    const maxWidthPx = maxWidthMm * pxPerMm * scaleFactor;
+    const scaledFontPx = fontPx * scaleFactor;
+    
     const fontWeight = isBold ? '700' : '400';
-    // Use system fonts that support a wide range of Unicode. 
-    // Fredoka is loaded in index.html, fallbacks added for safety.
-    const fontStack = `${fontWeight} ${fontPx}px "Fredoka", "Segoe UI", "Tahoma", "Arial", "sans-serif"`;
+    // Use a robust font stack including the app's Fredoka font
+    const fontStack = `${fontWeight} ${scaledFontPx}px "Fredoka", "Segoe UI", "Tahoma", "Arial", "sans-serif"`;
     
     ctx.font = fontStack;
-    
-    // Core Logic: Only trigger RTL if Arabic script characters are present.
-    // Turkish/Latin will default to LTR even if they contain non-Latin1 chars.
-    const isRtl = ARABIC_REGEX.test(text);
     ctx.direction = isRtl ? 'rtl' : 'ltr';
-    ctx.textAlign = isRtl ? 'right' : 'left';
 
-    // Wrapping logic: Always use logical order (currentLine + word) 
-    // and let the Canvas engine handle bidi display.
+    // Logical word wrapping
     const words = text.split(/\s+/);
     const lines: string[] = [];
     let currentLine = '';
@@ -58,6 +50,7 @@ export const pdfService = {
       const word = words[i];
       const testLine = currentLine ? `${currentLine} ${word}` : word;
       const metrics = ctx.measureText(testLine);
+      
       if (metrics.width > maxWidthPx && i > 0) {
         lines.push(currentLine);
         currentLine = word;
@@ -67,11 +60,11 @@ export const pdfService = {
     }
     lines.push(currentLine);
 
-    const lineHeight = fontPx * 1.4;
+    const lineHeight = scaledFontPx * 1.4;
     canvas.width = maxWidthPx;
     canvas.height = Math.max(1, lines.length * lineHeight);
 
-    // Reset context properties after resize (resizing canvas clears context)
+    // Re-initialize context state after canvas resize
     ctx.font = fontStack;
     ctx.direction = isRtl ? 'rtl' : 'ltr';
     ctx.textAlign = isRtl ? 'right' : 'left';
@@ -79,15 +72,15 @@ export const pdfService = {
     ctx.fillStyle = '#000000';
 
     lines.forEach((line, index) => {
-      // For RTL, we fill text starting from the right edge of the canvas
+      // For RTL, text is anchored at the right edge
       const xPos = isRtl ? canvas.width : 0;
       ctx.fillText(line, xPos, index * lineHeight);
     });
 
     return {
       dataUrl: canvas.toDataURL('image/png'),
-      wMm: canvas.width / pxPerMm,
-      hMm: canvas.height / pxPerMm
+      wMm: canvas.width / (pxPerMm * scaleFactor),
+      hMm: canvas.height / (pxPerMm * scaleFactor)
     };
   },
 
@@ -117,36 +110,31 @@ export const pdfService = {
       if (!text || !text.trim()) return;
 
       if (this.needsImageRendering(text)) {
-        // Complex scripts (Arabic, Turkish specials, Emojis) go through Canvas
-        const render = this.renderComplexTextToImage(text, contentWidth, fontSize * 1.5, isBold);
+        const render = this.renderComplexTextToImage(text, contentWidth, fontSize * 1.2, isBold);
         if (render) {
           checkPage(render.hMm);
-          const isAr = ARABIC_REGEX.test(text);
-          // If Arabic, align to right margin, otherwise align to left margin (e.g. Turkish specials)
-          const xPos = isAr ? (pageWidth - margin - render.wMm) : margin;
-          // Standard high-quality image rendering for crisp text
+          const isRtl = ARABIC_REGEX.test(text);
+          // For RTL, align the resulting image to the right margin
+          const xPos = isRtl ? (pageWidth - margin - render.wMm) : margin;
           doc.addImage(render.dataUrl, 'PNG', xPos, y, render.wMm, render.hMm);
           y += render.hMm + 2;
         }
       } else {
-        // Standard Latin-1 rendering (Fast path for basic English/German)
         doc.setFontSize(fontSize);
         doc.setFont("helvetica", isBold ? "bold" : "normal");
-        
         const lines = doc.splitTextToSize(text, contentWidth);
         const textHeight = lines.length * (fontSize * 0.5);
-        
         checkPage(textHeight + 5);
         doc.text(lines, margin, y + (fontSize * 0.3));
         y += textHeight + 4;
       }
     };
 
-    // --- Header ---
-    // Detect if the quiz contains Arabic content for localized headers
+    // Determine primary language script for headers
     const sampleText = quiz.questions[0]?.prompt || '';
     const isAr = ARABIC_REGEX.test(sampleText);
     
+    // Header
     const titleText = isAr ? 'SnapQuizGame — امتحان' : 'SnapQuizGame — Exam';
     addTextBlock(titleText, 22, true);
     addTextBlock(`ID: ${quiz.id} | ${new Date().toLocaleDateString()}`, 10);
@@ -162,7 +150,7 @@ export const pdfService = {
     addTextBlock(dateLabel, 12);
     y += 5;
 
-    // --- Questions ---
+    // Questions
     for (let i = 0; i < quiz.questions.length; i++) {
       const q = quiz.questions[i];
       checkPage(30);
@@ -188,7 +176,7 @@ export const pdfService = {
       y += 4;
     }
 
-    // --- Answer Key ---
+    // Answer Key
     if (includeAnswerKey) {
       doc.addPage();
       y = margin;

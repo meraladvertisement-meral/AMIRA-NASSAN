@@ -1,10 +1,11 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { Question, QuizResult, QuizAttempt } from '../types/quiz';
 
 export function useQuizEngine(
   questions: Question[], 
   onComplete: (result: QuizResult) => void,
-  timePerQuestion?: number // Optional timer in seconds
+  timePerQuestion?: number
 ) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [currentAttempts, setCurrentAttempts] = useState(0);
@@ -18,10 +19,8 @@ export function useQuizEngine(
 
   const currentQuestion = questions[currentIndex];
 
-  // Timer logic
   useEffect(() => {
     if (!timePerQuestion || isFinished) return;
-
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
@@ -32,15 +31,11 @@ export function useQuizEngine(
         return prev - 1;
       });
     }, 1000);
-
     return () => clearInterval(timer);
   }, [currentIndex, isFinished, timePerQuestion]);
 
-  // Reset timer on question change
   useEffect(() => {
-    if (timePerQuestion) {
-      setTimeLeft(timePerQuestion);
-    }
+    if (timePerQuestion) setTimeLeft(timePerQuestion);
   }, [currentIndex, timePerQuestion]);
 
   const handleTimeout = useCallback(() => {
@@ -82,7 +77,7 @@ export function useQuizEngine(
     const isCorrect = userAnswer.trim().toLowerCase() === currentQuestion.correctAnswer.trim().toLowerCase();
     
     if (isCorrect) {
-      const pointEarned = currentAttempts === 0 ? 1 : 0.5; // Half points for second try
+      const pointEarned = currentAttempts === 0 ? 1 : 0.5;
       const newScore = score + pointEarned;
       
       const attempt: QuizAttempt = {
@@ -115,31 +110,16 @@ export function useQuizEngine(
           setFitbMode('MCQ');
           setCurrentAttempts(1);
           
-          // Prepare options for the multiple-choice attempt
-          let opts = Array.isArray(currentQuestion.options) ? [...currentQuestion.options] : [];
+          // Use precomputed distractors + correct answer
+          let distractors = Array.isArray(currentQuestion.options) ? [...currentQuestion.options] : [];
+          let finalOpts = [currentQuestion.correctAnswer, ...distractors.slice(0, 3)];
           
-          // Ensure correct answer is in the options and case is preserved from the original if possible
-          const lowerAnswer = currentQuestion.correctAnswer.toLowerCase();
-          const hasAnswer = opts.some(o => o.toLowerCase() === lowerAnswer);
-          
-          if (!hasAnswer) {
-            opts.push(currentQuestion.correctAnswer);
-          }
-          
-          // Strictly ensure exactly 4 options by filtering duplicates and filling gaps
-          const uniqueOpts = Array.from(new Set(opts.map(o => o.trim())));
-          let finalOpts = uniqueOpts.slice(0, 4);
-
-          // Fallback distractors if the AI didn't provide enough
-          const fallbacks = ["Incorrect", "False", "None", "Alternative", "Other", "Maybe", "Unlikely"];
+          // Fill to 4 if AI provided fewer
+          const fallbacks = ["None of these", "Incorrect", "Unknown", "N/A"];
           while (finalOpts.length < 4) {
-            const nextFallback = fallbacks.shift();
-            if (nextFallback && !finalOpts.some(o => o.toLowerCase() === nextFallback.toLowerCase())) {
-              finalOpts.push(nextFallback);
-            }
+            finalOpts.push(fallbacks.shift()!);
           }
           
-          // Final shuffle
           setFitbOptions(finalOpts.sort(() => Math.random() - 0.5));
         } else {
           logFail();
@@ -147,7 +127,7 @@ export function useQuizEngine(
         }
       }
     }
-  }, [currentIndex, currentAttempts, questions, score, isFinished, fitbMode, currentQuestion, advance]);
+  }, [currentIndex, currentAttempts, questions, score, isFinished, fitbMode, currentQuestion]);
 
   return {
     currentIndex,

@@ -18,7 +18,6 @@ interface QuizPageProps {
 }
 
 const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, onProgress, opponentProgress, mode, t, audio }) => {
-  // Timer is only active for Duel and Teacher modes
   const isTimeMode = mode === GameMode.DUEL || mode === GameMode.TEACHER;
   const timePerQuestion = isTimeMode ? 20 : undefined;
 
@@ -46,7 +45,7 @@ const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, onProgres
     showCorrect: false
   });
 
-  // Handle Background Music Lifecycle
+  // Handle Music Lifecycle specifically for this screen
   useEffect(() => {
     audio.startMusic('calm');
     return () => {
@@ -54,10 +53,16 @@ const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, onProgres
     };
   }, [audio]);
 
-  // Sync Progress with server for Duel/Teacher
   useEffect(() => {
     onProgress?.(currentIndex, score);
   }, [currentIndex, score, onProgress]);
+
+  // Handle low time sound feedback
+  useEffect(() => {
+    if (timePerQuestion && timeLeft <= 5 && timeLeft > 0 && !feedback.selected) {
+      // Small vibration or tick sound if we had one
+    }
+  }, [timeLeft, timePerQuestion, feedback.selected]);
 
   const onChoice = (choice: string) => {
     if (feedback.selected) return; 
@@ -111,6 +116,7 @@ const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, onProgres
 
   const handleQuitRequest = () => {
     if (confirm(t.next === 'Next' ? 'Are you sure you want to quit?' : 'Bist du sicher, dass du abbrechen möchtest?')) {
+      audio.stopMusic();
       onQuit();
     }
   };
@@ -129,9 +135,8 @@ const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, onProgres
 
   return (
     <div className="p-6 max-w-2xl mx-auto min-h-screen flex flex-col justify-center gap-6 relative">
-      {/* Full Screen Critical Time Tension Effect */}
-      {isCritical && (
-        <div className="fixed inset-0 pointer-events-none z-[-5] animate-pulse-fast bg-[radial-gradient(circle_at_center,transparent_30%,rgba(239,68,68,0.1)_100%)]"></div>
+      {isCritical && !feedback.selected && (
+        <div className="fixed inset-0 pointer-events-none z-[-5] animate-pulse-fast bg-[radial-gradient(circle_at_center,transparent_30%,rgba(239,68,68,0.08)_100%)]"></div>
       )}
 
       {/* Header Info */}
@@ -150,62 +155,63 @@ const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, onProgres
       </div>
 
       {/* Progress & Timers */}
-      <div className="space-y-6 relative z-10">
-        <div className="relative w-full bg-white/5 h-2 rounded-full overflow-hidden border border-white/10 shadow-inner">
-          <div 
-            className="h-full bg-brand-lime transition-all duration-700 ease-out shadow-[0_0_15px_rgba(132,204,22,0.4)]"
-            style={{ width: `${((currentIndex + 1) / quiz.questions.length) * 100}%` }}
-          >
-            <div className="absolute inset-0 bg-white/20 h-1/2 rounded-full m-0.5"></div>
-          </div>
-        </div>
-
-        {/* Dynamic Timer for Duel/Teacher modes */}
+      <div className="space-y-5 relative z-10">
         {timePerQuestion !== undefined && (
           <div className="animate-in slide-in-from-top-4 duration-500">
-            <Timer timeLeft={timeLeft} totalTime={timePerQuestion} className="px-1" />
+            <Timer timeLeft={timeLeft} totalTime={timePerQuestion} />
           </div>
         )}
+
+        <div className="relative w-full bg-white/5 h-1.5 rounded-full overflow-hidden border border-white/5 shadow-inner">
+          <div 
+            className="h-full bg-brand-lime/60 transition-all duration-700 ease-out"
+            style={{ width: `${((currentIndex + 1) / quiz.questions.length) * 100}%` }}
+          ></div>
+        </div>
         
-        {/* Opponent Tracker (Duel Mode) */}
         {opponentProgress && (
-          <div className="flex items-center gap-3 glass p-3 rounded-2xl border-brand-purple/30 bg-brand-purple/5 shadow-2xl animate-in fade-in duration-1000">
+          <div className="flex items-center gap-3 glass p-3 rounded-2xl border-brand-purple/20 bg-brand-purple/5 shadow-xl animate-in fade-in duration-1000">
              <div className="flex flex-col">
                 <span className="text-[8px] font-black text-brand-purple uppercase tracking-widest opacity-60">Opponent</span>
                 <span className="text-[10px] font-black text-white/80 uppercase">{opponentProgress.score} pts</span>
              </div>
-             <div className="flex-1 bg-black/30 h-1.5 rounded-full overflow-hidden border border-white/5">
+             <div className="flex-1 bg-black/30 h-1 rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-brand-purple transition-all duration-1000 ease-in-out shadow-[0_0_10px_rgba(107,33,168,0.6)]"
+                  className="h-full bg-brand-purple transition-all duration-1000 ease-in-out shadow-[0_0_10px_rgba(107,33,168,0.4)]"
                   style={{ width: `${((opponentProgress.index + (opponentProgress.finished ? 0 : 1)) / quiz.questions.length) * 100}%` }}
                 ></div>
              </div>
              {opponentProgress.finished && (
-               <span className="text-[8px] font-black bg-brand-purple text-white px-2 py-0.5 rounded-full uppercase animate-pulse">Finished</span>
+               <span className="text-[8px] font-black bg-brand-purple text-white px-2 py-0.5 rounded-full uppercase animate-pulse">Done</span>
              )}
           </div>
         )}
       </div>
 
       {/* Question Card */}
-      <GlassCard className={`relative transition-all duration-500 z-10 ${wrongShake ? 'animate-shake border-red-500/50 shadow-[0_0_50px_rgba(239,68,68,0.2)]' : isCritical ? 'border-red-500/30' : 'border-white/20'}`}>
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 glass px-4 py-1.5 rounded-full border-white/20 shadow-lg">
+      <GlassCard className={`relative transition-all duration-500 z-10 ${wrongShake ? 'animate-shake border-red-500/50 shadow-[0_0_50px_rgba(239,68,68,0.2)]' : isCritical && !feedback.selected ? 'border-red-500/20' : 'border-white/20'}`}>
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 glass px-4 py-1.5 rounded-full border-white/20 shadow-lg flex items-center gap-2">
            <span className="text-[9px] font-black uppercase tracking-[0.3em] text-white/50">{currentQuestion.type}</span>
+           {currentQuestion.type === 'FITB' && fitbMode === 'MCQ' && (
+             <span className="bg-brand-purple text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full animate-pulse shadow-[0_0_10px_rgba(107,33,168,0.5)]">
+               2nd Chance!
+             </span>
+           )}
         </div>
 
-        <h2 className="text-2xl md:text-3xl font-bold mb-10 text-center leading-tight drop-shadow-md pt-6 text-white selection:bg-brand-lime selection:text-brand-dark">
+        <h2 className="text-2xl md:text-3xl font-bold mb-10 text-center leading-tight drop-shadow-md pt-6 text-white">
           {currentQuestion.prompt}
         </h2>
 
         {/* Answers Area */}
         <div className="grid gap-4">
           {currentQuestion.type === 'MCQ' || currentQuestion.type === 'TF' || (currentQuestion.type === 'FITB' && fitbMode === 'MCQ') ? (
-            <div className="grid gap-4">
+            <div className="grid gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
               {(currentQuestion.type === 'FITB' ? fitbOptions : currentQuestion.options).map((opt, i) => (
                 <ThreeDButton 
                   key={i} 
                   variant={getButtonVariant(opt)}
-                  className={`text-left py-5 px-6 text-base normal-case border-brand-purple/20 group relative overflow-hidden transition-all duration-300 ${feedback.selected ? 'opacity-50 grayscale-[0.5]' : 'hover:scale-[1.02]'}`}
+                  className={`text-left py-5 px-6 text-base normal-case border-brand-purple/10 group relative overflow-hidden transition-all duration-300 ${feedback.selected ? 'opacity-50' : 'hover:scale-[1.01]'}`}
                   onClick={() => onChoice(opt)}
                   disabled={!!feedback.selected}
                 >
@@ -220,7 +226,7 @@ const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, onProgres
               ))}
             </div>
           ) : (
-            <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="relative">
                 <input 
                   autoFocus
@@ -236,8 +242,8 @@ const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, onProgres
                   placeholder={t.next === 'Next' ? "Type your answer..." : "Antwort eingeben..."}
                 />
                 {feedback.showCorrect && (
-                  <p className="text-center text-brand-lime font-black mt-3 animate-bounce uppercase tracking-widest text-xs">
-                    Correct: {currentQuestion.correctAnswer}
+                  <p className="text-center text-brand-lime font-black mt-3 animate-bounce uppercase tracking-widest text-[10px]">
+                    Correct Answer: {currentQuestion.correctAnswer}
                   </p>
                 )}
               </div>
@@ -253,16 +259,15 @@ const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, onProgres
         </div>
       </GlassCard>
 
-      {/* Decorative BG Glows */}
-      <div className="fixed top-[-10%] right-[-10%] w-[500px] h-[500px] bg-brand-purple opacity-[0.07] blur-[120px] pointer-events-none -z-10"></div>
-      <div className="fixed bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-brand-lime opacity-[0.05] blur-[120px] pointer-events-none -z-10"></div>
+      <div className="fixed top-[-10%] right-[-10%] w-[500px] h-[500px] bg-brand-purple opacity-[0.05] blur-[120px] pointer-events-none -z-10"></div>
+      <div className="fixed bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-brand-lime opacity-[0.03] blur-[120px] pointer-events-none -z-10"></div>
 
       <style>{`
         @keyframes pulse-fast {
-          0%, 100% { opacity: 0.5; }
+          0%, 100% { opacity: 0.4; }
           50% { opacity: 1; }
         }
-        .animate-pulse-fast { animation: pulse-fast 1s ease-in-out infinite; }
+        .animate-pulse-fast { animation: pulse-fast 0.8s ease-in-out infinite; }
       `}</style>
     </div>
   );

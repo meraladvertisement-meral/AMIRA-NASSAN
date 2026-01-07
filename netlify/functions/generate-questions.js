@@ -1,3 +1,4 @@
+
 /**
  * Netlify Function: generate-questions
  * Handles quiz generation via Gemini API securely on the server side.
@@ -41,6 +42,7 @@ exports.handler = async (event, context) => {
       };
     }
 
+    // Use the latest 3 series model as per instructions
     const model = "gemini-3-flash-preview";
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
@@ -51,8 +53,15 @@ exports.handler = async (event, context) => {
     - Count: ${settings.questionCount || 10}
     - Types: ${(settings.types || ['MCQ']).join(", ")}
     - Output MUST be valid JSON.
-    - For FITB (Fill in the blanks), provide 3 distractors in 'options' for retry.
     
+    - FOR FITB (Fill-in-the-blanks): 
+      1. 'correctAnswer' must be the single word or short phrase that fits the blank.
+      2. 'options' MUST contain exactly 3 plausible distractors (incorrect but related words) to be used if the user fails their first attempt.
+    
+    - FOR MCQ:
+      1. 'options' MUST contain 4 choices.
+      2. 'correctAnswer' MUST be one of those 4 choices.
+
     Response Format (JSON only):
     {
       "language": "${language}",
@@ -60,10 +69,10 @@ exports.handler = async (event, context) => {
         {
           "id": "q1",
           "type": "MCQ|TF|FITB",
-          "prompt": "The question text?",
-          "options": ["Option A", "Option B", "Option C", "Option D"],
-          "correctAnswer": "Option A",
-          "explanation": "Why it is correct."
+          "prompt": "The question text with a _______ blank if FITB.",
+          "options": ["Distractor1", "Distractor2", "Distractor3"],
+          "correctAnswer": "CorrectWord",
+          "explanation": "Brief context."
         }
       ]
     }`;
@@ -73,20 +82,20 @@ exports.handler = async (event, context) => {
     ];
     
     if (isImage) {
-      // Content should be base64 string
       const base64Data = content.includes('base64,') ? content.split(',')[1] : content;
       parts.push({
         inlineData: { mimeType: "image/jpeg", data: base64Data }
       });
     }
 
+    // REST API requires 'contents' to be an array of Content objects
     const requestPayload = {
       contents: [{ role: "user", parts }],
       systemInstruction: { parts: [{ text: systemPrompt }] },
       generationConfig: {
         responseMimeType: "application/json",
         temperature: 0.2,
-        maxOutputTokens: 4000
+        maxOutputTokens: 8000
       }
     };
 
@@ -100,19 +109,10 @@ exports.handler = async (event, context) => {
     
     if (!response.ok) {
       const errorDetail = data.error?.message || "Unknown Gemini API Error";
-      console.error("Gemini API error response:", data);
       return { 
         statusCode: response.status, 
         headers, 
-        body: JSON.stringify({ error: errorDetail }) 
-      };
-    }
-
-    if (!data.candidates || !data.candidates[0]?.content?.parts[0]?.text) {
-      return {
-        statusCode: 500,
-        headers,
-        body: JSON.stringify({ error: "AI generated an invalid response structure." })
+        body: JSON.stringify({ error: errorDetail, status: data.error?.status }) 
       };
     }
 
@@ -121,7 +121,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 200,
       headers,
-      body: generatedText // This is already JSON string from Gemini
+      body: generatedText
     };
 
   } catch (error) {

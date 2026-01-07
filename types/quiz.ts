@@ -1,3 +1,4 @@
+
 export type QuestionType = 'MCQ' | 'TF' | 'FITB';
 export type Difficulty = 'easy' | 'medium' | 'hard';
 export type QuizSource = 'ai' | 'manual';
@@ -13,9 +14,17 @@ export interface Question {
   id: string;
   type: QuestionType;
   prompt: string;
-  options: string[]; // For MCQ/TF, and for FITB attempt 2 distractors (precomputed)
+  options: string[];
   correctAnswer: string;
   explanation?: string;
+}
+
+// Added QuizAttempt interface to fix Error in file hooks/useQuizEngine.ts
+export interface QuizAttempt {
+  questionId: string;
+  attempts: number;
+  isCorrect: boolean;
+  score: number;
 }
 
 export interface QuizRecord {
@@ -25,21 +34,15 @@ export interface QuizRecord {
   settings: QuizSettings;
   questions: Question[];
   pdfGenerated?: boolean;
-  pdfUrl?: string; // Reference to the generated Blob URL
+  pdfUrl?: string;
   source?: QuizSource;
-}
-
-export interface QuizAttempt {
-  questionId: string;
-  attempts: number;
-  isCorrect: boolean;
-  score: number;
 }
 
 export interface QuizResult {
   score: number;
   totalQuestions: number;
   percentage: number;
+  // Updated attempts type for consistency
   attempts: QuizAttempt[];
 }
 
@@ -52,22 +55,19 @@ export enum GameMode {
 export interface RoomParticipant {
   uid: string;
   displayName: string;
-  photoURL?: string;
-  joinedAt: any;
-  score: number;
   status: 'active' | 'finished';
+  score: number;
 }
 
 export interface RoomData {
   id: string;
   hostUid: string;
-  quizId: string;
   quizSnapshot: QuizRecord;
   joinCode: string;
   status: 'lobby' | 'started' | 'ended';
+  expiresAt: any;
   createdAt: any;
-  startedAt?: any;
-  settings: QuizSettings;
+  mode: GameMode;
 }
 
 export type AppScreen = 
@@ -82,7 +82,6 @@ export type AppScreen =
   | 'HISTORY'
   | 'PRICING'
   | 'AFFILIATE'
-  | 'SETTINGS'
   | 'INFO_CENTER'
   | 'ROOM_LOBBY'
   | 'JOIN_ROOM';

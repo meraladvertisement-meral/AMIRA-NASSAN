@@ -3,38 +3,37 @@ import React from 'react';
 import { GlassCard } from '../components/layout/GlassCard';
 import { ThreeDButton } from '../components/layout/ThreeDButton';
 import { Language } from '../i18n';
-import { LegalDocType } from '../services/legalService';
 
 interface LandingPageProps {
   onNext: () => void;
   onGuest: () => void;
-  onAdmin?: () => void;
+  onAdmin: () => void;
   lang: Language;
   setLang: (l: Language) => void;
   t: any;
-  onOpenLegal: (type: LegalDocType) => void;
+  onOpenLegal: () => void;
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({ onNext, onGuest, onAdmin, lang, setLang, t, onOpenLegal }) => {
   return (
-    <div className="flex flex-col items-center justify-center p-6 h-screen overflow-hidden relative">
+    <div className="flex flex-col items-center justify-center p-6 min-h-screen overflow-hidden relative">
       {/* Background Decor */}
-      <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-brand-lime opacity-20 blur-[100px] rounded-full"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-64 h-64 bg-brand-gold opacity-10 blur-[100px] rounded-full"></div>
+      <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-brand-lime opacity-20 blur-[100px] rounded-full pointer-events-none"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-64 h-64 bg-brand-gold opacity-10 blur-[100px] rounded-full pointer-events-none"></div>
 
-      <div className="absolute top-6 right-6 flex gap-2 z-10">
+      <div className="absolute top-6 right-6 flex gap-2 z-20">
         <button 
           onClick={() => setLang('en')}
-          className={`px-3 py-1 rounded-full text-sm font-bold transition ${lang === 'en' ? 'bg-white text-brand-dark shadow-lg' : 'bg-white/20 text-white'}`}
+          className={`px-3 py-1 rounded-full text-sm font-bold transition ${lang === 'en' ? 'bg-white text-brand-dark shadow-lg' : 'bg-white/20 text-white hover:bg-white/30'}`}
         >EN</button>
         <button 
           onClick={() => setLang('de')}
-          className={`px-3 py-1 rounded-full text-sm font-bold transition ${lang === 'de' ? 'bg-white text-brand-dark shadow-lg' : 'bg-white/20 text-white'}`}
+          className={`px-3 py-1 rounded-full text-sm font-bold transition ${lang === 'de' ? 'bg-white text-brand-dark shadow-lg' : 'bg-white/20 text-white hover:bg-white/30'}`}
         >DE</button>
       </div>
 
-      <div className="flex flex-col items-center mb-8 animate-float z-10">
-        <div className="w-48 h-48 md:w-56 md:h-56 logo-circle bg-white mb-6 flex items-center justify-center relative shadow-[0_20px_50px_rgba(0,0,0,0.4)]">
+      <div className="flex flex-col items-center mb-8 animate-float z-10 pointer-events-none">
+        <div className="w-40 h-40 md:w-56 md:h-56 logo-circle bg-white mb-6 flex items-center justify-center relative shadow-[0_20px_50px_rgba(0,0,0,0.4)]">
           <svg viewBox="0 0 100 100" className="w-full h-full p-6" xmlns="http://www.w3.org/2000/svg">
             <rect x="20" y="40" width="60" height="40" rx="8" fill="#1e3a8a" />
             <rect x="35" y="32" width="30" height="12" rx="4" fill="#1e3a8a" />
@@ -55,8 +54,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNext, onGuest, onAdmin, lan
         </p>
       </div>
 
-      <GlassCard className="w-full max-w-md space-y-4 z-10 border-white/30">
-        <ThreeDButton variant="primary" className="w-full text-xl py-5" onClick={onNext}>
+      <GlassCard className="w-full max-w-sm space-y-4 z-10 border-white/30">
+        <ThreeDButton variant="primary" className="w-full text-lg py-5" onClick={onNext}>
           {t.continueGoogle}
         </ThreeDButton>
         <ThreeDButton variant="secondary" className="w-full py-4 bg-white/10" onClick={onGuest}>
@@ -65,17 +64,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNext, onGuest, onAdmin, lan
         
         <div className="flex flex-col items-center gap-4 pt-4">
           <div className="flex justify-center gap-6 text-white/50 text-[10px] font-bold uppercase tracking-widest">
-            <button onClick={() => onOpenLegal('terms')} className="hover:text-brand-lime transition-colors">{t.terms}</button>
-            <button onClick={() => onOpenLegal('privacy')} className="hover:text-brand-lime transition-colors">{t.privacy}</button>
-            <button onClick={() => onOpenLegal('impressum')} className="hover:text-brand-lime transition-colors">{t.impressum}</button>
+            <button onClick={onOpenLegal} className="hover:text-brand-lime transition-colors">{t.terms}</button>
+            <button onClick={onOpenLegal} className="hover:text-brand-lime transition-colors">{t.privacy}</button>
+            <button onClick={onOpenLegal} className="hover:text-brand-lime transition-colors">{t.impressum}</button>
           </div>
           
-          {/* Subtle Admin Trigger */}
           <button 
             onClick={onAdmin} 
-            className="text-[8px] text-white/10 hover:text-white/30 uppercase tracking-[0.5em] transition-colors"
+            className="text-[8px] text-white/10 hover:text-white/30 uppercase tracking-[0.5em] transition-colors mt-2 p-2"
           >
-            Admin
+            Admin Access
           </button>
         </div>
       </GlassCard>

@@ -2,6 +2,11 @@
 export type PlanId = 'free' | 'plus' | 'unlimited';
 export type BillingCycle = 'monthly' | 'yearly';
 
+export interface GuestUsage {
+  dailyPlaysUsed: number;
+  lastResetTimestamp: number;
+}
+
 export interface PlayPack {
   id: string;
   count: number;
@@ -21,22 +26,4 @@ export interface Entitlement {
   lastDailyReset: number;
   lastMonthlyReset: number;
   subscriptionStartAt?: number;
-}
-
-export interface ConsentLog {
-  type: "subscription_immediate_start" | "packs_immediate_supply";
-  accepted: boolean;
-  acceptedAt: number;
-  uiLang: string;
-}
-
-export interface RefundRequest {
-  id: string;
-  uid: string;
-  createdAt: number;
-  orderType: "subscription" | "pack";
-  pricePaid: number;
-  deduction: number;
-  refundAmount: number;
-  status: "requested" | "approved" | "rejected" | "paid";
 }

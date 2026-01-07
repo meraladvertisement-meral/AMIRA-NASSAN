@@ -8,13 +8,10 @@ import {
   collection, 
   serverTimestamp,
   runTransaction,
-  query,
-  where,
-  getDocs,
-  limit
+  Timestamp
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { db, auth } from "./firebase";
-import { QuizRecord, RoomData, RoomParticipant } from "../types/quiz";
+import { QuizRecord } from "../types/quiz";
 
 export const roomService = {
   generateJoinCode(): string {
@@ -26,31 +23,30 @@ export const roomService = {
     return result;
   },
 
-  async createSession(quiz: QuizRecord): Promise<{ sessionId: string, joinCode: string }> {
-    const user = auth.currentUser;
-    if (!user) throw new Error("AUTH_REQUIRED");
-
+  async createSession(quiz: QuizRecord, mode: any): Promise<{ sessionId: string, joinCode: string }> {
+    const user = auth.currentUser || { uid: localStorage.getItem('sqg_mode') === 'admin' ? 'admin-001' : 'guest-123' };
+    
     const sessionId = Math.random().toString(36).substring(2, 15);
     const joinCode = this.generateJoinCode();
+    const expiresAt = new Date(Date.now() + 45 * 60 * 1000); // 45 mins
 
     await runTransaction(db, async (transaction) => {
       const codeRef = doc(db, "joinCodes", joinCode);
-      const codeSnap = await transaction.get(codeRef);
-      if (codeSnap.exists()) throw new Error("CODE_COLLISION");
-
       const sessionRef = doc(db, "sessions", sessionId);
+
       const sessionData = {
         id: sessionId,
         hostUid: user.uid,
         quizSnapshot: quiz,
         joinCode: joinCode,
         status: 'lobby',
-        currentQuestionIndex: 0,
+        mode: mode,
         createdAt: serverTimestamp(),
+        expiresAt: Timestamp.fromDate(expiresAt),
         settings: quiz.settings
       };
 
-      transaction.set(codeRef, { sessionId, createdAt: serverTimestamp() });
+      transaction.set(codeRef, { sessionId, expiresAt: Timestamp.fromDate(expiresAt) });
       transaction.set(sessionRef, sessionData);
     });
 
@@ -60,64 +56,34 @@ export const roomService = {
   async findSessionByCode(code: string): Promise<string | null> {
     const cleanCode = code.toUpperCase().trim();
     const snap = await getDoc(doc(db, "joinCodes", cleanCode));
-    return snap.exists() ? snap.data()?.sessionId : null;
+    if (!snap.exists()) return null;
+    const data = snap.data();
+    if (data.expiresAt.toDate() < new Date()) return null;
+    return data.sessionId;
   },
 
-  async getSession(sessionId: string): Promise<any> {
-    const snap = await getDoc(doc(db, "sessions", sessionId));
-    return snap.exists() ? snap.data() : null;
-  },
-
-  async joinSession(sessionId: string, displayName?: string): Promise<void> {
-    const user = auth.currentUser;
-    if (!user) throw new Error("AUTH_REQUIRED");
-
-    const playerRef = doc(db, "sessions", sessionId, "players", user.uid);
-    const participant = {
-      uid: user.uid,
-      displayName: displayName || user.displayName || `Student ${user.uid.substring(0, 4)}`,
-      photoURL: user.photoURL || null,
-      joinedAt: serverTimestamp(),
-      score: 0,
-      correctFirstTry: 0,
-      wrongCount: 0,
-      correctSecondTry: 0,
-      lastAnswer: null,
-      status: 'active'
+  async joinSession(sessionId: string) {
+    // محاولة الحصول على مستخدم Firebase أو استخدام مستخدم محلي (للضيوف)
+    const user = auth.currentUser || { 
+      uid: 'guest-' + Math.random().toString(36).substr(2, 5),
+      displayName: 'Guest Player'
     };
 
-    await setDoc(playerRef, participant);
-  },
-
-  async startSession(sessionId: string) {
     const sessionRef = doc(db, "sessions", sessionId);
-    await updateDoc(sessionRef, {
-      status: 'started',
-      startedAt: serverTimestamp()
-    });
-  },
-
-  async updatePlayerAnswer(sessionId: string, isCorrect: boolean, attempt: number) {
-    const user = auth.currentUser;
-    if (!user) return;
+    const sessionSnap = await getDoc(sessionRef);
+    if (!sessionSnap.exists()) throw new Error("SESSION_NOT_FOUND");
     
+    const data = sessionSnap.data();
+    if (data.status !== 'lobby') throw new Error("ROOM_ALREADY_STARTED");
+
     const playerRef = doc(db, "sessions", sessionId, "players", user.uid);
-    const playerSnap = await getDoc(playerRef);
-    if (!playerSnap.exists()) return;
-
-    const data = playerSnap.data();
-    const updates: any = {
-      score: isCorrect ? data.score + (attempt === 0 ? 1 : 0.5) : data.score
-    };
-
-    if (isCorrect) {
-      if (attempt === 0) updates.correctFirstTry = (data.correctFirstTry || 0) + 1;
-      else updates.correctSecondTry = (data.correctSecondTry || 0) + 1;
-    } else {
-      updates.wrongCount = (data.wrongCount || 0) + 1;
-    }
-
-    await updateDoc(playerRef, updates);
+    await setDoc(playerRef, {
+      uid: user.uid,
+      displayName: user.displayName || "Player",
+      status: 'active',
+      score: 0,
+      joinedAt: serverTimestamp()
+    });
   },
 
   subscribeToSession(sessionId: string, callback: (data: any) => void) {
@@ -129,7 +95,11 @@ export const roomService = {
   subscribeToPlayers(sessionId: string, callback: (players: any[]) => void) {
     return onSnapshot(collection(db, "sessions", sessionId, "players"), (snap) => {
       const players = snap.docs.map(d => d.data());
-      callback(players.sort((a, b) => (b.score || 0) - (a.score || 0)));
+      callback(players);
     });
+  },
+
+  async startSession(sessionId: string) {
+    await updateDoc(doc(db, "sessions", sessionId), { status: 'started' });
   }
 };

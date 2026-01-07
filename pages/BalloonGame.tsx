@@ -20,7 +20,7 @@ const BalloonGame: React.FC<BalloonGameProps> = ({ onComplete, t, audio }) => {
   const [popped, setPopped] = useState(0);
   const [balloons, setBalloons] = useState<Balloon[]>([]);
 
-  // Background Music Lifecycle
+  // Background Music Lifecycle specifically for this screen
   useEffect(() => {
     audio.startMusic('arcade');
     

@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { GlassCard } from '../components/layout/GlassCard';
 import { ThreeDButton } from '../components/layout/ThreeDButton';
 import { roomService } from '../services/roomService';
-import { RoomData, RoomParticipant } from '../types/quiz';
 import { auth } from '../services/firebase';
 
 interface RoomLobbyPageProps {
@@ -14,138 +13,116 @@ interface RoomLobbyPageProps {
 }
 
 const RoomLobbyPage: React.FC<RoomLobbyPageProps> = ({ roomId, onStart, onBack, t }) => {
-  const [room, setRoom] = useState<RoomData | null>(null);
-  const [players, setPlayers] = useState<RoomParticipant[]>([]);
-  const [copied, setCopied] = useState<string | null>(null);
+  const [room, setRoom] = useState<any>(null);
+  const [players, setPlayers] = useState<any[]>([]);
+  const [timeLeft, setTimeLeft] = useState<string>("");
+  const [isExpired, setIsExpired] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  const currentUser = auth.currentUser;
-  const isHost = room?.hostUid === currentUser?.uid;
-  const joinUrl = `${window.location.origin}${window.location.pathname}?joinRoom=${roomId}`;
+  const isHost = room?.hostUid === auth.currentUser?.uid;
+  const joinUrl = `${window.location.origin}/?join=${room?.joinCode}`;
 
   useEffect(() => {
-    // Fix: Use subscribeToSession instead of subscribeToRoom
     const unsubRoom = roomService.subscribeToSession(roomId, (data) => {
       setRoom(data);
-      if (data.status === 'started' && !isHost) {
-        onStart();
-      }
+      if (data.status === 'started' && !isHost) onStart();
     });
-
-    const unsubPlayers = roomService.subscribeToPlayers(roomId, (list) => {
-      setPlayers(list);
-    });
-
-    return () => {
-      unsubRoom();
-      unsubPlayers();
-    };
+    const unsubPlayers = roomService.subscribeToPlayers(roomId, setPlayers);
+    return () => { unsubRoom(); unsubPlayers(); };
   }, [roomId, isHost, onStart]);
 
-  const handleCopy = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(label);
-    setTimeout(() => setCopied(null), 2000);
+  useEffect(() => {
+    if (!room?.expiresAt) return;
+    const timer = setInterval(() => {
+      const now = new Date().getTime();
+      const distance = room.expiresAt.toDate().getTime() - now;
+      if (distance < 0) {
+        clearInterval(timer);
+        setTimeLeft("EXPIRED");
+        setIsExpired(true);
+      } else {
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+        setTimeLeft(`${minutes}:${seconds < 10 ? '0' : ''}${seconds}`);
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [room]);
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(joinUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleStartGame = async () => {
-    if (players.length === 0) return;
-    try {
-      // Fix: Use startSession instead of startRoom
-      await roomService.startSession(roomId);
-      onStart();
-    } catch (err) {
-      console.error(err);
-      alert("Failed to start game.");
-    }
-  };
-
-  if (!room) return null;
+  if (isExpired) {
+    return (
+      <div className="p-6 h-screen flex flex-col items-center justify-center text-center gap-6">
+        <h2 className="text-4xl font-black text-red-500 uppercase">Session Expired ⏰</h2>
+        <p className="text-white/60">The join time has run out. Please create a new room.</p>
+        <ThreeDButton onClick={onBack}>Go Back</ThreeDButton>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-lg mx-auto min-h-screen flex flex-col gap-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-black italic">{t.appName} Lobby</h2>
-        <button onClick={onBack} className="glass px-4 py-2 rounded-xl text-sm font-bold active:scale-95 transition">←</button>
+        <h2 className="text-3xl font-black italic">{room?.mode} Lobby</h2>
+        <div className="bg-red-500/20 px-4 py-2 rounded-xl border border-red-500/30">
+          <span className="text-red-400 font-black text-xl tabular-nums">{timeLeft}</span>
+        </div>
       </div>
 
       <GlassCard className="text-center space-y-6">
         <div>
-          <p className="text-[10px] uppercase font-black text-white/50 tracking-[0.2em] mb-1">{t.roomCode}</p>
-          <div className="flex items-center justify-center gap-3">
-            <span className="text-5xl font-black text-brand-lime tracking-[0.2em]">{room.joinCode}</span>
-            <button 
-              onClick={() => handleCopy(room.joinCode, 'code')}
-              className="bg-white/10 p-2 rounded-xl hover:bg-white/20 transition"
-            >
-              {copied === 'code' ? '✅' : '📋'}
-            </button>
-          </div>
+          <p className="text-[10px] uppercase font-black text-white/40 tracking-widest mb-2">Room Code</p>
+          <p className="text-6xl font-black text-brand-lime tracking-[0.5rem]">{room?.joinCode}</p>
         </div>
 
-        <div className="bg-white/5 border border-white/10 p-4 rounded-3xl">
-          <p className="text-[10px] uppercase font-black text-white/40 tracking-widest mb-2">Direct Invite Link</p>
-          <div className="flex gap-2">
-            <input 
-              readOnly 
-              value={joinUrl} 
-              className="flex-1 bg-transparent text-[10px] text-white/60 font-mono outline-none truncate"
-            />
-            <button 
-              onClick={() => handleCopy(joinUrl, 'link')}
-              className="text-[10px] font-black text-brand-lime uppercase tracking-widest"
-            >
-              {copied === 'link' ? t.copied : t.copyLink}
-            </button>
-          </div>
+        <div className="flex flex-col gap-2">
+           <p className="text-[10px] uppercase font-black text-white/40 tracking-widest">Invite Link</p>
+           <div className="flex gap-2">
+             <input readOnly value={joinUrl} className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white/50 truncate" />
+             <button onClick={copyLink} className="bg-brand-lime text-brand-dark px-4 py-2 rounded-xl font-black text-xs uppercase">
+               {copied ? 'Copied' : 'Copy'}
+             </button>
+           </div>
         </div>
       </GlassCard>
 
       <div className="flex-1 flex flex-col gap-4">
-        <div className="flex justify-between items-center px-2">
-          <h3 className="text-sm font-black uppercase tracking-widest text-white/50">Players</h3>
-          <span className="bg-brand-lime text-brand-dark px-3 py-1 rounded-full text-xs font-black">{players.length}</span>
-        </div>
-
+        <h3 className="text-sm font-black uppercase tracking-widest text-white/40 flex justify-between">
+          Players Joined <span>{players.length}</span>
+        </h3>
         <div className="grid grid-cols-1 gap-2 overflow-y-auto max-h-[300px] pr-2 custom-scrollbar">
           {players.length === 0 ? (
-            <div className="text-center py-12 text-white/20 italic font-bold">Waiting for students...</div>
+            <p className="text-center py-10 text-white/20 italic">Waiting for players to join...</p>
           ) : (
             players.map((p, i) => (
-              <GlassCard key={i} className="p-3 border-white/10 flex items-center gap-4 animate-in slide-in-from-right-4 duration-300">
-                <div className="w-10 h-10 rounded-full bg-brand-purple flex items-center justify-center font-black text-white shadow-lg">
-                  {p.displayName.charAt(0)}
-                </div>
-                <div className="flex-1">
-                  <p className="font-bold text-sm">{p.displayName}</p>
-                  <p className="text-[8px] uppercase font-black text-brand-lime">Ready</p>
-                </div>
+              <GlassCard key={i} className="p-4 border-white/10 flex items-center justify-between animate-in slide-in-from-right-4">
+                <span className="font-bold">{p.displayName}</span>
+                <span className="text-[10px] text-brand-lime font-black uppercase">Ready</span>
               </GlassCard>
             ))
           )}
         </div>
       </div>
 
-      <div className="mt-auto">
-        {isHost ? (
-          <ThreeDButton 
-            variant="primary" 
-            className="w-full py-5 text-xl" 
-            disabled={players.length === 0}
-            onClick={handleStartGame}
-          >
-            Start Game 🔊
-          </ThreeDButton>
-        ) : (
-          <div className="bg-white/10 p-6 rounded-3xl text-center border border-white/10">
-            <div className="flex justify-center mb-3">
-              <div className="w-3 h-3 bg-brand-lime rounded-full animate-ping"></div>
-            </div>
-            <p className="text-sm font-black uppercase tracking-widest text-brand-lime">
-              {t.waitingForHost}
-            </p>
-          </div>
-        )}
-      </div>
+      {isHost ? (
+        <ThreeDButton 
+          variant="primary" 
+          className="w-full py-5 text-xl" 
+          disabled={players.length === 0}
+          onClick={() => roomService.startSession(roomId)}
+        >
+          Start Quiz 🚀
+        </ThreeDButton>
+      ) : (
+        <div className="text-center p-6 glass rounded-3xl animate-pulse border-brand-lime/20">
+          <p className="text-brand-lime font-black uppercase tracking-widest">Waiting for host to start...</p>
+        </div>
+      )}
     </div>
   );
 };
