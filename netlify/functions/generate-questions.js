@@ -1,139 +1,119 @@
 
-/**
- * Netlify Function: generate-questions
- * Handles quiz generation via Gemini API securely on the server side.
- */
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+const { GoogleGenAI, Type } = require("@google/genai");
 
 exports.handler = async (event, context) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Content-Type': 'application/json'
   };
 
-  // Handle preflight requests
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
   }
 
   try {
-    if (event.httpMethod !== 'POST') {
-      return { 
-        statusCode: 405, 
-        headers, 
-        body: JSON.stringify({ error: "Method Not Allowed. Use POST." }) 
-      };
-    }
-
-    const body = JSON.parse(event.body);
-    const { content, settings, isImage, language } = body;
+    const { content, settings, isImage, language } = JSON.parse(event.body);
     
-    // Read key from environment variable (NOT hardcoded)
-    const apiKey = process.env.GEMINI_API_KEY;
-
+    // استخدام المفتاح من بيئة Netlify حصراً
+    const apiKey = process.env.API_KEY;
     if (!apiKey) {
-      console.error("Critical: GEMINI_API_KEY environment variable is not set.");
       return { 
         statusCode: 500, 
         headers, 
-        body: JSON.stringify({ error: "Server Configuration Error: API key missing." }) 
+        body: JSON.stringify({ error: "Missing API_KEY in environment variables." }) 
       };
     }
 
-    // Use the latest 3 series model as per instructions
-    const model = "gemini-3-flash-preview";
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
+    const ai = new GoogleGenAI({ apiKey });
+    
     const difficultyDesc = settings.difficulty === 'mixed' 
       ? 'a balanced mix of easy, medium, and hard questions' 
       : settings.difficulty;
 
-    const systemPrompt = `Task: Create a high-quality educational quiz.
-    Strict Rules:
-    - Language: ${language === 'de' ? 'German' : 'English'}
-    - Difficulty: ${difficultyDesc}
-    - Count: ${settings.questionCount || 10}
-    - Types: ${(settings.types || ['MCQ']).join(", ")}
-    - Output MUST be valid JSON.
+    const systemInstruction = `You are a world-class educational content creator.
+    Generate a quiz in ${language === 'de' ? 'German' : 'English'}.
     
-    - FOR FITB (Fill-in-the-blanks): 
-      1. 'correctAnswer' must be the single word or short phrase that fits the blank.
-      2. 'options' MUST contain exactly 3 plausible distractors (incorrect but related words) to be used if the user fails their first attempt.
-    
-    - FOR MCQ:
-      1. 'options' MUST contain 4 choices.
-      2. 'correctAnswer' MUST be one of those 4 choices.
+    RULES:
+    - Count: ${settings.questionCount || 10} questions.
+    - Difficulty: ${difficultyDesc}.
+    - Types: ${(settings.types || ['MCQ']).join(", ")}.
+    - FITB (Fill-in-the-blanks): The 'prompt' must contain '_______'. 'correctAnswer' is the word. 'options' must be 3 plausible but wrong distractors.
+    - MCQ: 'options' must be 4 choices. 'correctAnswer' must be one of them.
+    - Return ONLY valid JSON.`;
 
-    Response Format (JSON only):
-    {
-      "language": "${language}",
-      "questions": [
-        {
-          "id": "q1",
-          "type": "MCQ|TF|FITB",
-          "prompt": "The question text with a _______ blank if FITB.",
-          "options": ["Distractor1", "Distractor2", "Distractor3"],
-          "correctAnswer": "CorrectWord",
-          "explanation": "Brief context."
-        }
-      ]
-    }`;
+    const promptText = isImage 
+      ? "Analyze this image and create a quiz based on its educational content."
+      : `Generate a quiz based on this content: ${content.substring(0, 15000)}`;
 
-    const parts = [
-      { text: isImage ? "Analyze this image and create a quiz based on its educational content." : `Generate a quiz based on this content: ${content.substring(0, 15000)}` }
-    ];
-    
+    const contents = [{
+      parts: [{ text: promptText }]
+    }];
+
     if (isImage) {
       const base64Data = content.includes('base64,') ? content.split(',')[1] : content;
-      parts.push({
-        inlineData: { mimeType: "image/jpeg", data: base64Data }
+      contents[0].parts.push({
+        inlineData: {
+          mimeType: "image/jpeg",
+          data: base64Data
+        }
       });
     }
 
-    // REST API requires 'contents' to be an array of Content objects
-    const requestPayload = {
-      contents: [{ role: "user", parts }],
-      systemInstruction: { parts: [{ text: systemPrompt }] },
-      generationConfig: {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents,
+      config: {
+        systemInstruction,
         responseMimeType: "application/json",
-        temperature: 0.2,
-        maxOutputTokens: 8000
-      }
-    };
-
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestPayload)
+        temperature: 0.3,
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            language: { type: Type.STRING },
+            questions: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  id: { type: Type.STRING },
+                  type: { type: Type.STRING, description: "MCQ, TF, or FITB" },
+                  prompt: { type: Type.STRING },
+                  options: { 
+                    type: Type.ARRAY, 
+                    items: { type: Type.STRING },
+                    description: "For FITB, these are distractors for the 2nd attempt."
+                  },
+                  correctAnswer: { type: Type.STRING },
+                  explanation: { type: Type.STRING }
+                },
+                required: ["id", "type", "prompt", "options", "correctAnswer"]
+              }
+            }
+          },
+          required: ["language", "questions"]
+        }
+      },
     });
 
-    const data = await response.json();
-    
-    if (!response.ok) {
-      const errorDetail = data.error?.message || "Unknown Gemini API Error";
-      return { 
-        statusCode: response.status, 
-        headers, 
-        body: JSON.stringify({ error: errorDetail, status: data.error?.status }) 
-      };
-    }
-
-    const generatedText = data.candidates[0].content.parts[0].text;
+    const outputText = response.text;
     
     return {
       statusCode: 200,
       headers,
-      body: generatedText
+      body: outputText
     };
 
   } catch (error) {
-    console.error("Function Handler Error:", error);
+    console.error("Netlify Function Error:", error);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: "INTERNAL_SERVER_ERROR", details: error.message })
+      body: JSON.stringify({ 
+        error: "GENERATION_FAILED", 
+        message: error.message 
+      })
     };
   }
 };

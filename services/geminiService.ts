@@ -1,14 +1,10 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
-import { QuizSettings, Question } from "../types/quiz";
+import { Question, QuizSettings } from "../types/quiz";
 
 export class GeminiService {
   private static instance: GeminiService;
-  private ai: GoogleGenAI;
 
-  private constructor() {
-    this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-  }
+  private constructor() {}
 
   public static getInstance(): GeminiService {
     if (!GeminiService.instance) {
@@ -25,81 +21,36 @@ export class GeminiService {
     lang: string = "en"
   ): Promise<{ questions: Question[], language: string }> {
     try {
-      const modelName = 'gemini-3-flash-preview';
-      
-      const difficultyDesc = settings.difficulty === 'mixed' 
-        ? 'a balanced mix of easy, medium, and hard questions' 
-        : settings.difficulty;
-
-      const systemInstruction = `You are an expert educator. Create a high-quality quiz in ${lang === 'de' ? 'German' : 'English'}.
-      Difficulty: ${difficultyDesc}.
-      Question Count: ${settings.questionCount}.
-      Selected Question Types: ${settings.types.join(", ")}.
-
-      JSON Rules:
-      - MCQ: 4 options, 1 correctAnswer.
-      - TF: options ["True", "False"], 1 correctAnswer.
-      - FITB: prompt must have a "_______", options must be 3 distractors, correctAnswer is the missing word.
-      - Return a valid JSON object only.`;
-
-      const promptText = isImage 
-        ? "Analyze this image and create a quiz based on its educational content."
-        : `Generate a comprehensive quiz from this material: \n\n ${content.substring(0, 15000)}`;
-
-      // Correct Structure for contents: avoid mixing role:user with top-level system instruction if not in chat mode
-      const contents = [{
-        parts: [{ text: promptText }]
-      }];
-      
-      if (isImage) {
-        const base64Data = content.includes('base64,') ? content.split(',')[1] : content;
-        contents[0].parts.push({
-          inlineData: { mimeType: "image/jpeg", data: base64Data }
-        } as any);
-      }
-
-      const response = await this.ai.models.generateContent({
-        model: modelName,
-        contents,
-        config: {
-          systemInstruction,
-          responseMimeType: "application/json",
-          temperature: 0.3,
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              language: { type: Type.STRING },
-              questions: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    id: { type: Type.STRING },
-                    type: { type: Type.STRING },
-                    prompt: { type: Type.STRING },
-                    options: { type: Type.ARRAY, items: { type: Type.STRING } },
-                    correctAnswer: { type: Type.STRING },
-                    explanation: { type: Type.STRING }
-                  },
-                  required: ["id", "type", "prompt", "options", "correctAnswer"]
-                }
-              }
-            },
-            required: ["language", "questions"]
-          }
-        }
+      const response = await fetch('/.netlify/functions/generate-questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content,
+          settings,
+          isImage,
+          language: lang
+        }),
+        signal
       });
 
-      if (!response || !response.text) throw new Error("EMPTY_AI_RESPONSE");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Server Error: ${response.status}`);
+      }
 
-      const result = JSON.parse(response.text.trim());
+      const result = await response.json();
+      
+      if (!result.questions || !Array.isArray(result.questions)) {
+        throw new Error("INVALID_FORMAT");
+      }
+
       return {
         questions: result.questions,
         language: result.language || lang
       };
     } catch (error: any) {
-      console.error("Gemini Generation Failed:", error);
-      throw new Error(error.message || "FAILED_TO_GENERATE_QUIZ");
+      console.error("Quiz Generation Failed:", error);
+      throw error;
     }
   }
 }
