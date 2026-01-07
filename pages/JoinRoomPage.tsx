@@ -41,11 +41,17 @@ const JoinRoomPage: React.FC<JoinRoomPageProps> = ({ onJoinSuccess, onBack, t })
         billingService.consumeGuestPlay();
         onJoinSuccess(roomId);
       } else {
-        setError(t.roomNotFound || "Room not found or expired.");
+        setError(t.roomNotFound);
       }
     } catch (err: any) {
       console.error(err);
-      setError(err.message === 'ROOM_ALREADY_STARTED' ? "Game already started." : "Failed to join room.");
+      if (err.message === 'DUEL_ROOM_FULL') {
+        setError(t.roomFull);
+      } else if (err.message === 'ROOM_ALREADY_STARTED') {
+        setError(t.alreadyStarted);
+      } else {
+        setError(t.roomNotFound);
+      }
     } finally {
       setLoading(false);
     }
@@ -126,4 +132,5 @@ const JoinRoomPage: React.FC<JoinRoomPageProps> = ({ onJoinSuccess, onBack, t })
   );
 };
 
+// Added missing default export
 export default JoinRoomPage;

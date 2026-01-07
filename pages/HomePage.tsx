@@ -51,11 +51,15 @@ const HomePage: React.FC<HomePageProps> = ({
         
         <div className="flex items-center gap-3">
           <button 
-            onClick={() => { audio.playSfx('click'); audio.toggleMute(); }}
-            className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-300 active:scale-90 shadow-lg ${
+            onClick={() => { 
+              audio.enableAudio(); // تأكيد تفعيل الصوت للمتصفح
+              audio.playSfx('click'); 
+              audio.toggleMute(); 
+            }}
+            className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-300 active:scale-90 shadow-lg border ${
               audio.isMuted 
-                ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
-                : 'bg-brand-lime/20 text-brand-lime border border-brand-lime/30'
+                ? 'bg-red-500/10 text-red-400 border-red-500/30' 
+                : 'bg-brand-lime/20 text-brand-lime border-brand-lime/30'
             }`}
           >
             <span className="text-lg leading-none">{audio.isMuted ? '🔇' : '🔊'}</span>
@@ -75,7 +79,7 @@ const HomePage: React.FC<HomePageProps> = ({
           <ThreeDButton 
             variant="primary" 
             className="w-full flex items-center justify-between py-8 group" 
-            onClick={() => onSelectMode(GameMode.SOLO)}
+            onClick={() => { audio.enableAudio(); onSelectMode(GameMode.SOLO); }}
           >
             <div className="flex flex-col items-start">
               <span className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-1">Create AI Quiz</span>
@@ -85,17 +89,17 @@ const HomePage: React.FC<HomePageProps> = ({
           </ThreeDButton>
 
           <div className="grid grid-cols-2 gap-4">
-            <ThreeDButton variant="secondary" className="py-6 flex flex-col items-center gap-1" onClick={() => onSelectMode(GameMode.DUEL)}>
+            <ThreeDButton variant="secondary" className="py-6 flex flex-col items-center gap-1" onClick={() => { audio.enableAudio(); onSelectMode(GameMode.DUEL); }}>
               <span className="text-[10px] opacity-50 font-black tracking-widest">1 VS 1</span>
               <span className="text-lg">{t.duel} ⚔️</span>
             </ThreeDButton>
-            <ThreeDButton variant="secondary" className="py-6 flex flex-col items-center gap-1" onClick={() => onSelectMode(GameMode.TEACHER)}>
+            <ThreeDButton variant="secondary" className="py-6 flex flex-col items-center gap-1" onClick={() => { audio.enableAudio(); onSelectMode(GameMode.TEACHER); }}>
               <span className="text-[10px] opacity-50 font-black tracking-widest">CLASSROOM</span>
               <span className="text-lg">{t.teacher} 👩‍🏫</span>
             </ThreeDButton>
           </div>
 
-          <ThreeDButton variant="warning" className="w-full py-5 bg-white/5 border-white/10 hover:bg-white/10" onClick={onJoinDuel}>
+          <ThreeDButton variant="warning" className="w-full py-5 bg-white/5 border-white/10 hover:bg-white/10" onClick={() => { audio.enableAudio(); onJoinDuel(); }}>
             <span className="flex items-center justify-center gap-2">
               {t.joinRoom} <span className="text-xl">🔑</span>
             </span>
@@ -104,7 +108,7 @@ const HomePage: React.FC<HomePageProps> = ({
 
         <div className="grid grid-cols-2 gap-4">
           <button 
-            onClick={onHistory} 
+            onClick={() => { audio.enableAudio(); onHistory(); }}
             className="glass group p-6 rounded-[2rem] flex flex-col items-center gap-2 hover:bg-white/20 transition-all active:scale-95 border-white/10"
           >
             <span className="text-2xl group-hover:scale-110 transition-transform">📁</span>
@@ -112,37 +116,13 @@ const HomePage: React.FC<HomePageProps> = ({
           </button>
           
           <button 
-            onClick={onPricing} 
+            onClick={() => { audio.enableAudio(); onPricing(); }} 
             className="glass group p-6 rounded-[2rem] flex flex-col items-center gap-2 hover:bg-white/20 transition-all active:scale-95 border-white/10"
           >
             <span className="text-2xl group-hover:scale-110 transition-transform">💎</span>
             <span className="text-[10px] font-black uppercase tracking-widest opacity-70">{t.pricing}</span>
           </button>
         </div>
-        
-        <div className="flex flex-col items-center gap-5 mt-4">
-          <button 
-            onClick={onAffiliate} 
-            className="text-white/60 text-[10px] font-black uppercase tracking-[0.2em] hover:text-brand-lime transition-colors"
-          >
-            ✨ {t.affiliate}
-          </button>
-          <button 
-            onClick={onInfoCenter} 
-            className="text-white/30 text-[9px] font-black uppercase tracking-[0.4em] hover:text-white transition-colors"
-          >
-            {t.contact}
-          </button>
-        </div>
-
-        {isGuest && (
-          <div className="mt-6 p-5 bg-brand-gold/10 border border-brand-gold/20 rounded-[2rem] text-center backdrop-blur-sm animate-pulse">
-            <p className="text-[9px] font-black text-brand-gold uppercase tracking-[0.3em] mb-1.5">{t.appName} Demo</p>
-            <p className="text-[11px] font-medium text-white/70 leading-relaxed">
-              {t.guestBlocker}
-            </p>
-          </div>
-        )}
       </main>
 
       <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-brand-dark/20 to-transparent pointer-events-none -z-10"></div>

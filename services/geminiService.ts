@@ -17,9 +17,17 @@ export class GeminiService {
     content: string, 
     settings: QuizSettings, 
     isImage: boolean = false, 
-    signal?: AbortSignal,
+    externalSignal?: AbortSignal,
     lang: string = "en"
   ): Promise<{ questions: Question[], language: string }> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second hard timeout
+
+    // Combine signals if externalSignal is provided
+    if (externalSignal) {
+      externalSignal.addEventListener('abort', () => controller.abort());
+    }
+
     try {
       const response = await fetch('/.netlify/functions/generate-questions', {
         method: 'POST',
@@ -30,8 +38,10 @@ export class GeminiService {
           isImage,
           language: lang
         }),
-        signal
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       const contentType = response.headers.get("content-type");
       let result;
@@ -57,6 +67,10 @@ export class GeminiService {
         language: lang
       };
     } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error("Generation took too long. Please try again.");
+      }
       console.error("Quiz Generation Failed:", error);
       throw error;
     }

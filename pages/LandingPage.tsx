@@ -23,6 +23,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNext, onGuest, onAdmin, lan
 
       <div className="absolute top-6 right-6 flex gap-2 z-20">
         <button 
+          onClick={() => setLang('ar')}
+          className={`px-3 py-1 rounded-full text-sm font-bold transition ${lang === 'ar' ? 'bg-white text-brand-dark shadow-lg' : 'bg-white/20 text-white hover:bg-white/30'}`}
+        >AR</button>
+        <button 
           onClick={() => setLang('en')}
           className={`px-3 py-1 rounded-full text-sm font-bold transition ${lang === 'en' ? 'bg-white text-brand-dark shadow-lg' : 'bg-white/20 text-white hover:bg-white/30'}`}
         >EN</button>
@@ -48,7 +52,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNext, onGuest, onAdmin, lan
             <circle cx="80" cy="45" r="3" fill="#84cc16" />
           </svg>
         </div>
-        <h1 className="text-4xl md:text-6xl font-black text-white drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)] mb-2 italic tracking-tighter">SnapQuizGame</h1>
+        <h1 className="text-4xl md:text-6xl font-black text-white drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)] mb-2 italic tracking-tighter">{t.appName}</h1>
         <p className="text-white font-medium tracking-widest uppercase text-[10px] bg-black/30 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 shadow-inner">
           Capture Knowledge Instantly 📸✨
         </p>

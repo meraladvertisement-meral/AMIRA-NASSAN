@@ -25,9 +25,11 @@ const ResultPage: React.FC<ResultPageProps> = ({ result, onHome, onBalloon, onLe
     <div className="p-6 max-w-lg mx-auto min-h-screen flex flex-col justify-center gap-6">
       <div className="text-center">
         <h2 className="text-5xl font-black italic mb-2 text-white drop-shadow-lg animate-in zoom-in duration-500">
-          {isWinner ? 'AMAZING!' : 'GOOD TRY!'}
+          {isWinner ? (t.appName === 'سناب كويز' ? 'رائع!' : 'AMAZING!') : (t.appName === 'سناب كويز' ? 'محاولة جيدة!' : 'GOOD TRY!')}
         </h2>
-        <p className="text-brand-lime font-bold tracking-widest uppercase animate-pulse">Quiz Completed</p>
+        <p className="text-brand-lime font-bold tracking-widest uppercase animate-pulse">
+          {t.appName === 'سناب كويز' ? 'اكتمل الاختبار' : 'Quiz Completed'}
+        </p>
       </div>
 
       <GlassCard className="text-center py-10 border-white/20">
@@ -35,7 +37,7 @@ const ResultPage: React.FC<ResultPageProps> = ({ result, onHome, onBalloon, onLe
           {Math.round(result.percentage)}%
         </div>
         <p className="text-xl font-bold text-white/70">
-          {result.score} / {result.totalQuestions} {t.score || 'Correct'}
+          {result.score} / {result.totalQuestions} {t.score}
         </p>
       </GlassCard>
 
@@ -46,15 +48,21 @@ const ResultPage: React.FC<ResultPageProps> = ({ result, onHome, onBalloon, onLe
           </ThreeDButton>
         )}
         
-        {showLeaderboardBtn && (
-          <ThreeDButton variant="primary" className="w-full py-5 text-xl bg-brand-lime" onClick={onLeaderboard}>
-            🏆 {t.appName === 'SnapQuizGame' ? 'View Leaderboard' : 'لوحة الصدارة'}
+        <div className="grid grid-cols-2 gap-3">
+          {showLeaderboardBtn && (
+            <ThreeDButton variant="primary" className="w-full py-4 text-lg" onClick={onLeaderboard}>
+              🏆 {t.results}
+            </ThreeDButton>
+          )}
+          
+          <ThreeDButton 
+            variant="secondary" 
+            className={`w-full py-4 opacity-80 ${!showLeaderboardBtn ? 'col-span-2' : ''}`} 
+            onClick={onHome}
+          >
+            🏠 {t.home}
           </ThreeDButton>
-        )}
-
-        <ThreeDButton variant="secondary" className="w-full py-4 opacity-80" onClick={onHome}>
-          🏠 {t.home}
-        </ThreeDButton>
+        </div>
       </div>
     </div>
   );

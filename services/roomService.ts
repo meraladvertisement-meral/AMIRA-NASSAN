@@ -10,7 +10,8 @@ import {
   runTransaction,
   Timestamp,
   query,
-  orderBy
+  orderBy,
+  getDocs
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { db, auth } from "./firebase";
 import { QuizRecord } from "../types/quiz";
@@ -55,7 +56,6 @@ export const roomService = {
       transaction.set(codeRef, { sessionId, expiresAt: Timestamp.fromDate(expiresAt) });
       transaction.set(sessionRef, sessionData);
       
-      // Add Host as the first player in the collection
       transaction.set(playerRef, {
         uid: user.uid,
         displayName: user.displayName || "Host",
@@ -90,6 +90,15 @@ export const roomService = {
     
     const data = sessionSnap.data();
     if (data.status !== 'lobby') throw new Error("ROOM_ALREADY_STARTED");
+
+    // Duel mode restriction: Max 2 players
+    if (data.mode === 'DUEL') {
+      const playersSnap = await getDocs(collection(db, "sessions", sessionId, "players"));
+      const isAlreadyIn = playersSnap.docs.some(doc => doc.id === user.uid);
+      if (!isAlreadyIn && playersSnap.size >= 2) {
+        throw new Error("DUEL_ROOM_FULL");
+      }
+    }
 
     const playerRef = doc(db, "sessions", sessionId, "players", user.uid);
     await setDoc(playerRef, {

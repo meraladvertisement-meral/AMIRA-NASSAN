@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AppScreen, GameMode, QuizSettings, QuizRecord, QuizResult, Question } from './types/quiz';
 import { Language, translations } from './i18n';
 import { useAudio } from './hooks/useAudio';
@@ -48,7 +48,9 @@ export default function App() {
   const [result, setResult] = useState<QuizResult | null>(null);
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [loadingError, setLoadingError] = useState<string | null>(null);
+  const [lastQuizContent, setLastQuizContent] = useState<{content: string, isImage: boolean} | null>(null);
   
+  const abortControllerRef = useRef<AbortController | null>(null);
   const audio = useAudio();
   const t = useMemo(() => translations[lang], [lang]);
 
@@ -137,8 +139,21 @@ export default function App() {
   const handleStartQuiz = async (content: string, isImage: boolean = false) => {
     setScreen('LOADING');
     setLoadingError(null);
+    setLastQuizContent({ content, isImage });
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
     try {
-      const response = await GeminiService.getInstance().generateQuiz(content, settings, isImage, undefined, lang);
+      const response = await GeminiService.getInstance().generateQuiz(
+        content, 
+        settings, 
+        isImage, 
+        abortControllerRef.current.signal, 
+        lang
+      );
       const newQuiz: QuizRecord = {
         id: Math.random().toString(36).substr(2, 9),
         createdAt: Date.now(),
@@ -157,7 +172,25 @@ export default function App() {
         setScreen('ROOM_LOBBY');
       }
     } catch (err: any) {
-      setLoadingError(err.message || t.generationError);
+      if (err.name === 'AbortError' || err.message === 'Generation took too long. Please try again.') {
+        setLoadingError('Generation took too long. Please try again.');
+      } else {
+        setLoadingError(err.message || t.generationError);
+      }
+    }
+  };
+
+  const handleCancelGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setScreen('CONFIG');
+  };
+
+  const handleRetryGeneration = () => {
+    if (lastQuizContent) {
+      handleStartQuiz(lastQuizContent.content, lastQuizContent.isImage);
     }
   };
 
@@ -206,9 +239,7 @@ export default function App() {
           onStart={(roomQuiz, hostUid) => {
             setQuiz(roomQuiz);
             const myUid = auth.currentUser?.uid || localStorage.getItem('sqg_guest_uid');
-            // Fix: Access hostUid from the callback arguments instead of the QuizRecord
-            const isHost = hostUid === myUid || isAdmin; // Simple check
-            // If mode is Teacher and I am host, go directly to Leaderboard
+            const isHost = hostUid === myUid || isAdmin; 
             if (isHost && mode === GameMode.TEACHER) {
               setScreen('LEADERBOARD');
             } else {
@@ -221,7 +252,7 @@ export default function App() {
       )}
 
       {screen === 'JOIN_ROOM' && <JoinRoomPage onJoinSuccess={(rid) => { setActiveRoomId(rid); setScreen('ROOM_LOBBY'); }} onBack={() => (user ? setScreen('HOME') : setScreen('LANDING'))} t={t} />}
-      {screen === 'LOADING' && <LoadingPage t={t} error={loadingError} onCancel={() => setScreen('CONFIG')} onRetry={() => setScreen('CONFIG')} onBack={() => setScreen('CONFIG')} />}
+      {screen === 'LOADING' && <LoadingPage t={t} error={loadingError} onCancel={handleCancelGeneration} onRetry={handleRetryGeneration} onBack={() => setScreen('CONFIG')} />}
       {screen === 'READY' && quiz && <ReadyPage quiz={quiz} onStart={() => setScreen('ARENA')} onBack={() => setScreen('CONFIG')} t={t} />}
       
       {screen === 'ARENA' && quiz && (

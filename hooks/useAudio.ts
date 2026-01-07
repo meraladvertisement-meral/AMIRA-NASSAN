@@ -3,10 +3,12 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 
 const SFX = {
   click: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
-  correct: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',
+  correct: 'https://assets.mixkit.co/active_storage/sfx/2700/2700-preview.mp3', // صوت نجاح مميز
   wrong: 'https://assets.mixkit.co/active_storage/sfx/2561/2561-preview.mp3',
   pop: 'https://assets.mixkit.co/active_storage/sfx/2569/2569-preview.mp3',
   win: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3',
+  tick: 'https://assets.mixkit.co/active_storage/sfx/2570/2570-preview.mp3', // صوت تكتكة المؤقت
+  game_over: 'https://assets.mixkit.co/active_storage/sfx/2562/2562-preview.mp3',
 };
 
 const MUSIC = {
@@ -15,7 +17,12 @@ const MUSIC = {
 };
 
 export function useAudio() {
-  const [isMuted, setIsMuted] = useState(() => localStorage.getItem('sqg_muted') === 'true');
+  // الافتراضي صامت (true) إذا لم يكن هناك خيار محفوظ
+  const [isMuted, setIsMuted] = useState(() => {
+    const saved = localStorage.getItem('sqg_muted');
+    return saved === null ? true : saved === 'true';
+  });
+  
   const [audioEnabled, setAudioEnabled] = useState(false);
   const musicRef = useRef<HTMLAudioElement | null>(null);
 
@@ -28,56 +35,44 @@ export function useAudio() {
 
   const stopMusic = useCallback(() => {
     if (musicRef.current) {
-      const audio = musicRef.current;
-      audio.pause();
-      // Properly release the media resource
-      audio.src = "";
-      audio.load();
+      musicRef.current.pause();
+      musicRef.current.src = "";
       musicRef.current = null;
     }
   }, []);
 
   const playSfx = useCallback((type: keyof typeof SFX) => {
     if (isMuted || !audioEnabled) return;
-    const audio = new Audio(SFX[type]);
-    audio.volume = 0.6;
-    audio.play().catch((err) => console.warn('SFX playback failed:', err));
+    try {
+      const audio = new Audio(SFX[type]);
+      audio.volume = type === 'tick' ? 0.3 : 0.6;
+      audio.play().catch(() => {});
+    } catch (e) {}
   }, [isMuted, audioEnabled]);
 
   const startMusic = useCallback((type: keyof typeof MUSIC) => {
-    // If audio is not enabled by interaction yet, we can't play
     if (!audioEnabled) return;
-    
     stopMusic();
-    
-    const audioObj = new Audio(MUSIC[type]);
-    audioObj.loop = true;
-    audioObj.muted = isMuted;
-    audioObj.volume = 0.3; // Music should be background
-    musicRef.current = audioObj;
-    
-    audioObj.play().catch((err) => {
-      console.warn('Music playback failed:', err);
-    });
+    try {
+      const audioObj = new Audio(MUSIC[type]);
+      audioObj.loop = true;
+      audioObj.muted = isMuted;
+      audioObj.volume = 0.3;
+      musicRef.current = audioObj;
+      audioObj.play().catch(() => {});
+    } catch (e) {}
   }, [isMuted, audioEnabled, stopMusic]);
 
   const enableAudio = useCallback(() => {
     if (audioEnabled) return;
     setAudioEnabled(true);
-    // Play a silent or subtle sound to "unlock" audio context
-    const contextUnlock = new Audio(SFX.click);
-    contextUnlock.volume = 0;
-    contextUnlock.play().catch(() => {});
+    // فتح سياق الصوت للمتصفح
+    const silent = new Audio(SFX.click);
+    silent.volume = 0;
+    silent.play().catch(() => {});
   }, [audioEnabled]);
 
   const toggleMute = () => setIsMuted(prev => !prev);
-
-  // Stop music on unmount of the audio hook owner
-  useEffect(() => {
-    return () => {
-      stopMusic();
-    };
-  }, [stopMusic]);
 
   return { isMuted, toggleMute, playSfx, startMusic, stopMusic, enableAudio, audioEnabled };
 }

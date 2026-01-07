@@ -9,7 +9,7 @@ exports.handler = async (event, context) => {
     'Content-Type': 'application/json'
   };
 
-  // Preflight-Check für CORS
+  // Preflight-Check for CORS
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
   }
@@ -24,7 +24,6 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Body korrekt parsen (Netlify kann den Body manchmal base64-kodiert senden)
     let body;
     try {
       const rawBody = event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString() : event.body;
@@ -47,16 +46,17 @@ exports.handler = async (event, context) => {
     const systemInstruction = `You are an expert educator. Generate a quiz in ${language === 'de' ? 'German' : 'English'}.
     Return ONLY a JSON object. No markdown, no backticks, just the raw JSON.
     
-    Structure:
+    IMPORTANT CONSTRAINTS:
     - Count: ${settings.questionCount || 10}
     - Difficulty: ${difficultyDesc}
     - Types: ${(settings.types || ['MCQ']).join(", ")}
-    - FITB: prompt must have '_______'. options: 3 distractors.
-    - MCQ: options: 4 choices.`;
+    - For MCQ: You MUST provide exactly 4 unique options. DO NOT repeat the same sentence, phrase, or word across different options. Every choice must be distinct.
+    - FITB: prompt must have '_______'. options: 3 unique distractors.
+    - MCQ: options: 4 unique choices.`;
 
     const promptText = isImage 
-      ? "Create a quiz based on this image."
-      : `Create a quiz based on: ${content.substring(0, 10000)}`;
+      ? "Create a quiz based on this image. Ensure all multiple choice options are unique and do not repeat."
+      : `Create a quiz based on the following content. Ensure all multiple choice options are unique and do not repeat: ${content.substring(0, 10000)}`;
 
     const contents = [{ parts: [{ text: promptText }] }];
 
@@ -100,7 +100,6 @@ exports.handler = async (event, context) => {
 
     let jsonString = response.text || "";
     
-    // Bereinigung: Falls die KI trotzdem ```json ... ``` zurückgibt
     if (jsonString.includes("```")) {
       jsonString = jsonString.replace(/```json/g, "").replace(/```/g, "").trim();
     }

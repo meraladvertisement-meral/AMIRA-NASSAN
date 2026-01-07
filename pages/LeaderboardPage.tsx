@@ -33,12 +33,12 @@ const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ roomId, quiz, onHome,
     <div className="p-6 max-w-lg mx-auto min-h-screen flex flex-col gap-6 animate-in fade-in duration-700">
       <div className="text-center space-y-2">
         <h2 className="text-4xl font-black italic text-brand-lime tracking-tighter uppercase drop-shadow-md">
-          {t.appName === 'SnapQuizGame' ? 'Live Leaderboard' : 'لوحة الصدارة الحية'}
+          {t.liveLeaderboard}
         </h2>
         <div className="flex items-center justify-center gap-2">
           <span className="w-2 h-2 rounded-full bg-brand-lime animate-ping"></span>
           <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">
-            Updating Real-time ⚡
+            {t.appName === 'سناب كويز' ? 'تحديث مباشر ⚡' : 'Updating Real-time ⚡'}
           </p>
         </div>
       </div>
@@ -63,20 +63,24 @@ const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ roomId, quiz, onHome,
               <div className="flex flex-col">
                 <span className="font-bold text-sm truncate max-w-[120px]">{player.displayName}</span>
                 <span className="text-[10px] text-white/30 uppercase font-black">
-                  {player.status === 'finished' ? '✅ Finished' : `✏️ Q${player.progress + 1}`}
+                  {player.status === 'finished' ? `✅ ${t.finished}` : `✏️ Q${player.progress + 1}`}
                 </span>
               </div>
             </div>
             
             <div className="text-right flex flex-col items-end">
               <span className="block text-xl font-black text-brand-lime leading-none">{player.score}</span>
-              <span className="text-[8px] font-black text-white/20 uppercase tracking-widest">Points</span>
+              <span className="text-[8px] font-black text-white/20 uppercase tracking-widest">
+                {t.appName === 'سناب كويز' ? 'نقاط' : 'Points'}
+              </span>
             </div>
           </GlassCard>
         ))}
 
         {players.length === 0 && (
-          <p className="text-center py-20 text-white/20 italic">Waiting for results...</p>
+          <p className="text-center py-20 text-white/20 italic">
+            {t.appName === 'سناب كويز' ? 'بانتظار النتائج...' : 'Waiting for results...'}
+          </p>
         )}
       </div>
 
