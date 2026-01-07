@@ -65,7 +65,7 @@ export function useQuizEngine(
         score: score,
         totalQuestions: questions.length,
         percentage: (score / questions.length) * 100,
-        attempts: attemptsLog
+        attempts: [...attemptsLog]
       };
       onComplete(finalResult);
     }
@@ -77,6 +77,7 @@ export function useQuizEngine(
     const isCorrect = userAnswer.trim().toLowerCase() === currentQuestion.correctAnswer.trim().toLowerCase();
     
     if (isCorrect) {
+      // 1 point for 1st try, 0.5 for 2nd try
       const pointEarned = currentAttempts === 0 ? 1 : 0.5;
       const newScore = score + pointEarned;
       
@@ -96,38 +97,42 @@ export function useQuizEngine(
 
       if (currentQuestion.type === 'MCQ') {
         if (currentAttempts === 0) {
+          // Allow one more attempt
           setCurrentAttempts(1);
         } else {
           logFail();
           advance();
         }
       } else if (currentQuestion.type === 'TF') {
+        // Only one attempt for True/False
         logFail();
         advance();
       } else if (currentQuestion.type === 'FITB') {
         if (fitbMode === 'INPUT') {
-          // Switch to MCQ mode for the second attempt
-          setFitbMode('MCQ');
+          // 2nd Chance: Switch to MCQ mode
           setCurrentAttempts(1);
+          setFitbMode('MCQ');
           
-          // Use precomputed distractors + correct answer
-          let distractors = Array.isArray(currentQuestion.options) ? [...currentQuestion.options] : [];
-          let finalOpts = [currentQuestion.correctAnswer, ...distractors.slice(0, 3)];
+          // Precompute distractors from AI-provided options + correct answer
+          const distractors = Array.isArray(currentQuestion.options) ? [...currentQuestion.options] : [];
+          const pool = [currentQuestion.correctAnswer, ...distractors.slice(0, 3)];
           
-          // Fill to 4 if AI provided fewer
-          const fallbacks = ["None of these", "Incorrect", "Unknown", "N/A"];
-          while (finalOpts.length < 4) {
-            finalOpts.push(fallbacks.shift()!);
+          // Ensure we have 4 options
+          const fallbacks = ["None of the above", "Incorrect option", "Irrelevant", "Not applicable"];
+          while (pool.length < 4) {
+            const fb = fallbacks.shift();
+            if (fb) pool.push(fb);
           }
           
-          setFitbOptions(finalOpts.sort(() => Math.random() - 0.5));
+          setFitbOptions(pool.sort(() => Math.random() - 0.5));
         } else {
+          // Failed the 2nd attempt (MCQ mode)
           logFail();
           advance();
         }
       }
     }
-  }, [currentIndex, currentAttempts, questions, score, isFinished, fitbMode, currentQuestion]);
+  }, [currentIndex, currentAttempts, questions, score, isFinished, fitbMode, currentQuestion, attemptsLog]);
 
   return {
     currentIndex,

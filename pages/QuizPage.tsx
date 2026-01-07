@@ -45,7 +45,6 @@ const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, onProgres
     showCorrect: false
   });
 
-  // Handle Music Lifecycle specifically for this screen
   useEffect(() => {
     audio.startMusic('calm');
     return () => {
@@ -56,13 +55,6 @@ const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, onProgres
   useEffect(() => {
     onProgress?.(currentIndex, score);
   }, [currentIndex, score, onProgress]);
-
-  // Handle low time sound feedback
-  useEffect(() => {
-    if (timePerQuestion && timeLeft <= 5 && timeLeft > 0 && !feedback.selected) {
-      // Small vibration or tick sound if we had one
-    }
-  }, [timeLeft, timePerQuestion, feedback.selected]);
 
   const onChoice = (choice: string) => {
     if (feedback.selected) return; 
@@ -194,7 +186,7 @@ const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, onProgres
            <span className="text-[9px] font-black uppercase tracking-[0.3em] text-white/50">{currentQuestion.type}</span>
            {currentQuestion.type === 'FITB' && fitbMode === 'MCQ' && (
              <span className="bg-brand-purple text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-full animate-pulse shadow-[0_0_10px_rgba(107,33,168,0.5)]">
-               2nd Chance!
+               2nd Chance — Select Below!
              </span>
            )}
         </div>

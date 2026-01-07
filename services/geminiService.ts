@@ -40,25 +40,27 @@ export class GeminiService {
       - MCQ: 4 options, 1 correctAnswer.
       - TF: options ["True", "False"], 1 correctAnswer.
       - FITB: prompt must have a "_______", options must be 3 distractors, correctAnswer is the missing word.
-      - Return a valid JSON object.`;
+      - Return a valid JSON object only.`;
 
       const promptText = isImage 
         ? "Analyze this image and create a quiz based on its educational content."
         : `Generate a comprehensive quiz from this material: \n\n ${content.substring(0, 15000)}`;
 
-      const parts: any[] = [{ text: promptText }];
+      // Correct Structure for contents: avoid mixing role:user with top-level system instruction if not in chat mode
+      const contents = [{
+        parts: [{ text: promptText }]
+      }];
       
       if (isImage) {
         const base64Data = content.includes('base64,') ? content.split(',')[1] : content;
-        parts.push({
+        contents[0].parts.push({
           inlineData: { mimeType: "image/jpeg", data: base64Data }
-        });
+        } as any);
       }
 
-      // Fix: contents must be an object with parts, or an array of such objects without role conflicts in single-turn
       const response = await this.ai.models.generateContent({
         model: modelName,
-        contents: { parts },
+        contents,
         config: {
           systemInstruction,
           responseMimeType: "application/json",
@@ -73,7 +75,7 @@ export class GeminiService {
                   type: Type.OBJECT,
                   properties: {
                     id: { type: Type.STRING },
-                    type: { type: Type.STRING, description: "MCQ, TF, or FITB" },
+                    type: { type: Type.STRING },
                     prompt: { type: Type.STRING },
                     options: { type: Type.ARRAY, items: { type: Type.STRING } },
                     correctAnswer: { type: Type.STRING },
