@@ -13,6 +13,23 @@ export class GeminiService {
     return GeminiService.instance;
   }
 
+  async ocr(base64Image: string, lang: string = "en"): Promise<string> {
+    try {
+      const response = await fetch('/.netlify/functions/ocr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: base64Image, language: lang })
+      });
+      
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || "OCR Failed");
+      return result.text;
+    } catch (err: any) {
+      console.error("OCR Service Error:", err);
+      throw err;
+    }
+  }
+
   async generateQuiz(
     content: string, 
     settings: QuizSettings, 
@@ -21,9 +38,8 @@ export class GeminiService {
     lang: string = "en"
   ): Promise<{ questions: Question[], language: string }> {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second hard timeout
+    const timeoutId = setTimeout(() => controller.abort(), 45000); 
 
-    // Combine signals if externalSignal is provided
     if (externalSignal) {
       externalSignal.addEventListener('abort', () => controller.abort());
     }

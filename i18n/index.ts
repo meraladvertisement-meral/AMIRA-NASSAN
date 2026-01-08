@@ -1,3 +1,4 @@
+
 export type Language = 'en' | 'de';
 
 export const translations = {
@@ -40,6 +41,7 @@ export const translations = {
     pricing: "Pricing",
     affiliate: "Affiliate",
     contact: "Contact",
+    support: "Support",
     logout: "Logout",
     uploadPdf: "Upload PDF",
     takePhoto: "Camera",
@@ -56,7 +58,29 @@ export const translations = {
     generationError: "Failed to generate quiz. Please try again.",
     terms: "Terms",
     privacy: "Privacy",
-    impressum: "Impressum"
+    impressum: "Impressum",
+    saveTextTip: "You can save the text as is before generating questions as an additional file if you wish.",
+    subscriptions: "Subscriptions",
+    monthly: "Monthly",
+    yearly: "Yearly",
+    bestSeller: "Best Seller",
+    prepaidPacks: "Prepaid Play Packs",
+    packRules: "Pack Rules & Info",
+    packInfo1: "Solo quiz creation and play only.",
+    packInfo2: "Total number of solo quiz plays.",
+    packInfo3: "Teacher / Host mode NOT included.",
+    packInfo4: "1v1 Duel / Multiplayer NOT included.",
+    packInfo5: "Daily free credits still apply.",
+    packInfo6: "One-time payments, not subscriptions.",
+    packInfo7: "Plays expire 6 months after purchase.",
+    buyPlays: "Buy {count} Plays",
+    cancelSubConfirm: "Cancel subscription renewal?",
+    subActivated: "Subscription Activated!",
+    playsAdded: "Successfully added {count} plays!",
+    cancelSub: "Cancel",
+    subscribe: "Subscribe",
+    plusFeatures: ["200 plays / month", "20 Teacher quizzes / month", "Priority AI Generation"],
+    unlimitedFeatures: ["Unlimited plays (Fair Use)", "60 Teacher quizzes / month", "Custom PDF Branding"]
   },
   de: {
     mixed: "Gemischt",
@@ -97,6 +121,7 @@ export const translations = {
     pricing: "Preise",
     affiliate: "Partnerprogramm",
     contact: "Kontakt",
+    support: "Support",
     logout: "Abmelden",
     uploadPdf: "PDF hochladen",
     takePhoto: "Kamera",
@@ -113,6 +138,28 @@ export const translations = {
     generationError: "Quiz-Erstellung fehlgeschlagen. Bitte erneut versuchen.",
     terms: "AGB",
     privacy: "Datenschutz",
-    impressum: "Impressum"
+    impressum: "Impressum",
+    saveTextTip: "Sie können den Text speichern, bevor Sie Fragen generieren.",
+    subscriptions: "Abonnements",
+    monthly: "Monatlich",
+    yearly: "Jährlich",
+    bestSeller: "Bestseller",
+    prepaidPacks: "Prepaid-Spielpakete",
+    packRules: "Paketregeln & Infos",
+    packInfo1: "Nur Erstellung und Spielen von Solo-Quizzes.",
+    packInfo2: "Gesamtzahl der Solo-Quiz-Spiele.",
+    packInfo3: "Lehrer- / Host-Modus NICHT enthalten.",
+    packInfo4: "1vs1 Duell / Multiplayer NICHT enthalten.",
+    packInfo5: "Tägliches Gratis-Guthaben gilt weiterhin.",
+    packInfo6: "Einmalzahlungen, kein Abonnement.",
+    packInfo7: "Spiele laufen 6 Monate nach Kauf ab.",
+    buyPlays: "{count} Spiele kaufen",
+    cancelSubConfirm: "Abonnement-Verlängerung kündigen?",
+    subActivated: "Abonnement aktiviert!",
+    playsAdded: "{count} Spiele erfolgreich hinzugefügt!",
+    cancelSub: "Kündigen",
+    subscribe: "Abonnieren",
+    plusFeatures: ["200 Spiele / Monat", "20 Lehrer-Quizzes / Monat", "Priorisierte KI-Generierung"],
+    unlimitedFeatures: ["Unbegrenzte Spiele (Fair Use)", "60 Lehrer-Quizzes / Monat", "Eigenes PDF-Branding"]
   }
 };

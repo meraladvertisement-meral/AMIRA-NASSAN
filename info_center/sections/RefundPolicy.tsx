@@ -64,7 +64,7 @@ export const RefundPolicy: React.FC<RefundPolicyProps> = ({ lang }) => {
         
         <p className="mt-4">
           {isDe ? 'Um Ihr Recht auszuüben, kontaktieren Sie ' : 'To exercise your right, contact '}
-          <span className="underline">digitalsecrets635@gmail.com</span> 
+          <span className="underline font-mono">info@snapquizgame.app</span> 
           {isDe ? ' mit Ihren Kontodaten.' : ' with your account details.'}
         </p>
       </div>

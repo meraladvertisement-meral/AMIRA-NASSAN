@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AppScreen, GameMode, QuizSettings, QuizRecord, QuizResult, Question } from './types/quiz';
 import { Language, translations } from './i18n';
@@ -48,10 +49,16 @@ export default function App() {
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [lastQuizContent, setLastQuizContent] = useState<{content: string, isImage: boolean} | null>(null);
+  const [infoSection, setInfoSection] = useState<string>('plans');
   
   const abortControllerRef = useRef<AbortController | null>(null);
   const audio = useAudio();
   const t = useMemo(() => translations[lang], [lang]);
+
+  const changeLanguage = (l: Language) => {
+    setLang(l);
+    localStorage.setItem('sqg_ui_lang', l);
+  };
 
   const checkJoinParams = () => {
     const params = new URLSearchParams(window.location.search);
@@ -71,7 +78,7 @@ export default function App() {
       if (u) {
         setUser(u);
         setIsGuest(false);
-        const isUserAdmin = u.email === 'digitalsecrets635@gmail.com';
+        const isUserAdmin = u.email === 'info@snapquizgame.app';
         setIsAdmin(isUserAdmin);
         localStorage.setItem('sqg_mode', isUserAdmin ? 'admin' : 'user');
         
@@ -88,7 +95,6 @@ export default function App() {
           if (screen === 'LANDING') setScreen('HOME');
         } else {
           setUser(null);
-          // Only switch to landing if we are not on a deep-link screen
           if (screen !== 'JOIN_ROOM' && screen !== 'INFO_CENTER') {
             setScreen('LANDING');
           }
@@ -136,6 +142,11 @@ export default function App() {
     setUser(null);
     await signOut(auth).catch(() => {});
     setScreen('LANDING');
+  };
+
+  const openInfoCenter = (section: string) => {
+    setInfoSection(section);
+    setScreen('INFO_CENTER');
   };
 
   const handleStartQuiz = async (content: string, isImage: boolean = false) => {
@@ -224,13 +235,25 @@ export default function App() {
   if (isAuthLoading) return null;
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen pt-12">
+      {/* Global Language Bar */}
+      <div className="fixed top-0 left-0 w-full z-[100] h-12 bg-black/20 backdrop-blur-md flex justify-center items-center gap-2 border-b border-white/5">
+        <button 
+          onClick={() => changeLanguage('en')}
+          className={`px-4 py-1 rounded-full text-[10px] font-black transition-all uppercase tracking-widest ${lang === 'en' ? 'bg-white text-brand-dark shadow-lg scale-105' : 'text-white/40 hover:text-white/60'}`}
+        >EN</button>
+        <button 
+          onClick={() => changeLanguage('de')}
+          className={`px-4 py-1 rounded-full text-[10px] font-black transition-all uppercase tracking-widest ${lang === 'de' ? 'bg-white text-brand-dark shadow-lg scale-105' : 'text-white/40 hover:text-white/60'}`}
+        >DE</button>
+      </div>
+
       {screen === 'LANDING' && (
-        <LandingPage onNext={handleGoogleLogin} onGuest={() => handleGuestLogin(true)} onAdmin={handleAdminLogin} lang={lang} setLang={(l) => { setLang(l); localStorage.setItem('sqg_ui_lang', l); }} t={t} onOpenLegal={() => setScreen('INFO_CENTER')} />
+        <LandingPage onNext={handleGoogleLogin} onGuest={() => handleGuestLogin(true)} onAdmin={handleAdminLogin} lang={lang} setLang={changeLanguage} t={t} onOpenLegal={openInfoCenter} />
       )}
       
       {user && screen === 'HOME' && (
-        <HomePage onSelectMode={(m) => { setMode(m); setScreen('CONFIG'); }} onJoinDuel={() => setScreen('JOIN_ROOM')} onHistory={() => setScreen('HISTORY')} onPricing={() => setScreen('PRICING')} onAffiliate={() => setScreen('AFFILIATE')} onInfoCenter={() => setScreen('INFO_CENTER')} onLogout={handleLogout} onQuickSnap={() => {}} t={t} audio={audio} isGuest={isGuest} demoUsed={false} isAdmin={isAdmin} />
+        <HomePage onSelectMode={(m) => { setMode(m); setScreen('CONFIG'); }} onJoinDuel={() => setScreen('JOIN_ROOM')} onHistory={() => setScreen('HISTORY')} onPricing={() => setScreen('PRICING')} onAffiliate={() => setScreen('AFFILIATE')} onInfoCenter={openInfoCenter} onLogout={handleLogout} onQuickSnap={() => {}} t={t} audio={audio} isGuest={isGuest} demoUsed={false} isAdmin={isAdmin} />
       )}
 
       {screen === 'CONFIG' && <ConfigPage settings={settings} setSettings={setSettings} onStart={handleStartQuiz} onStartManual={handleStartManual} onBack={() => setScreen('HOME')} t={t} />}
@@ -300,7 +323,7 @@ export default function App() {
       {screen === 'HISTORY' && <HistoryPage onSelectQuiz={(q) => { setQuiz(q); setScreen('READY'); }} onBack={() => setScreen('HOME')} t={t} />}
       {screen === 'PRICING' && <PricingPage onBack={() => setScreen('HOME')} t={t} />}
       {screen === 'AFFILIATE' && <AffiliatePage onBack={() => setScreen('HOME')} t={t} lang={lang} />}
-      {screen === 'INFO_CENTER' && <InfoCenterPage onBack={() => user ? setScreen('HOME') : setScreen('LANDING')} lang={lang} />}
+      {screen === 'INFO_CENTER' && <InfoCenterPage onBack={() => user ? setScreen('HOME') : setScreen('LANDING')} lang={lang} defaultSection={infoSection} />}
     </div>
   );
 }

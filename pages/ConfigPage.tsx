@@ -2,9 +2,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GlassCard } from '../components/layout/GlassCard';
 import { ThreeDButton } from '../components/layout/ThreeDButton';
-import { QuizSettings, Difficulty, QuestionType, Question } from '../types/quiz';
+import { QuizSettings, Difficulty, QuestionType, Question, QuizRecord } from '../types/quiz';
 import { CameraModal } from '../components/camera/CameraModal';
 import { ManualQuizEditor } from '../components/quiz/ManualQuizEditor';
+import { GeminiService } from '../services/geminiService';
+import { pdfService } from '../services/pdfService';
+import { historyService } from '../services/historyService';
 
 interface ConfigPageProps {
   settings: QuizSettings;
@@ -29,9 +32,11 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
 }) => {
   const [creationMode, setCreationMode] = useState<'ai' | 'manual'>('ai');
   const [content, setContent] = useState(() => initialContent || localStorage.getItem('sqg_draft_content') || '');
+  const [title, setTitle] = useState('');
   const [activeTab, setActiveTab] = useState<'text' | 'pdf' | 'image'>(initialTab);
   const [fileName, setFileName] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [ocrLoading, setOcrLoading] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -78,8 +83,50 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
     }
   };
 
-  // Capture selection states before TypeScript narrows 'creationMode' via early return.
-  // This prevents errors where comparisons like creationMode === 'manual' are flagged as impossible.
+  const handleExtractText = async () => {
+    if (!content.startsWith('data:image')) return;
+    setOcrLoading(true);
+    try {
+      const extracted = await GeminiService.getInstance().ocr(content);
+      setContent(extracted);
+      setActiveTab('text');
+    } catch (err) {
+      alert("Failed to extract text. Please try again.");
+    } finally {
+      setOcrLoading(false);
+    }
+  };
+
+  const handleDownloadDocPdf = async () => {
+    if (!content.trim()) return;
+    try {
+      const blob = await pdfService.generateDocPdf(title || "Untitled Document", content);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${title || 'document'}.pdf`;
+      link.click();
+    } catch (err) {
+      alert("PDF Error");
+    }
+  };
+
+  const handleSaveDocToHistory = () => {
+    if (!content.trim()) return;
+    const record: QuizRecord = {
+      id: Math.random().toString(36).substr(2, 9),
+      createdAt: Date.now(),
+      questionLanguage: 'en',
+      settings: { ...settings },
+      questions: [],
+      source: 'document',
+      sourceText: content,
+      title: title || "Saved Document"
+    };
+    historyService.saveQuiz(record);
+    alert("Saved to History! 📁");
+  };
+
   const isAiActive = creationMode === 'ai';
   const isManualActive = creationMode === 'manual';
 
@@ -104,7 +151,6 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
         </button>
       </div>
 
-      {/* Mode Switcher */}
       <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 shadow-inner">
         <button 
           onClick={() => setCreationMode('ai')}
@@ -120,34 +166,102 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
         </button>
       </div>
 
-      <GlassCard className="p-4 border-white/20">
-        <div className="flex gap-2 mb-4">
+      <GlassCard className="p-4 border-white/20 space-y-4">
+        <div className="space-y-1">
+          <div className="flex justify-between items-center mb-1">
+            <label className="text-[10px] font-black uppercase text-white/30 ml-1 tracking-widest">Document Title</label>
+            {content.trim() && !content.startsWith('data:image') && (
+              <div className="flex gap-2">
+                <button 
+                  onClick={handleDownloadDocPdf}
+                  title="Download as PDF"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg bg-brand-gold/20 text-brand-gold border border-brand-gold/30 hover:bg-brand-gold/30 transition-all active:scale-90"
+                >
+                  📄
+                </button>
+                <button 
+                  onClick={handleSaveDocToHistory}
+                  title="Save to History"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg bg-brand-lime/20 text-brand-lime border border-brand-lime/30 hover:bg-brand-lime/30 transition-all active:scale-90"
+                >
+                  📁
+                </button>
+              </div>
+            )}
+          </div>
+          <input 
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full bg-white/5 rounded-xl px-4 py-3 text-sm focus:outline-none border-2 border-transparent focus:border-brand-lime/30 transition-all font-bold"
+            placeholder="Enter title for your PDF or Quiz..."
+          />
+          <p className="text-[10px] text-white/40 mt-2 px-1 leading-relaxed">
+            {t.appName === 'SnapQuizGame' 
+              ? "You can save the text as is before generating questions as an additional file if you wish."
+              : "يمكنك حفظ النص كما هو قبل تكوين الاسئلة كملف اضافي اذا رغبت"
+            }
+          </p>
+        </div>
+
+        <div className="flex gap-2">
           <button className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase transition ${activeTab === 'text' ? 'bg-white text-brand-dark shadow-md' : 'bg-white/10'}`} onClick={() => setActiveTab('text')}>{t.pasteText}</button>
           <button className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase transition ${activeTab === 'pdf' ? 'bg-white text-brand-dark shadow-md' : 'bg-white/10'}`} onClick={() => setActiveTab('pdf')}>{t.uploadPdf}</button>
           <button className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase transition ${activeTab === 'image' ? 'bg-white text-brand-dark shadow-md' : 'bg-white/10'}`} onClick={() => setActiveTab('image')}>{t.takePhoto}</button>
         </div>
 
         {activeTab === 'text' ? (
-          <textarea 
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className="w-full h-40 bg-white/5 rounded-xl p-4 focus:outline-none border-2 border-transparent focus:border-brand-lime transition-all text-sm font-medium placeholder:text-white/10"
-            placeholder="Paste your learning materials, notes, or paragraphs here..."
-          />
-        ) : (
-          <div 
-            onClick={() => fileInputRef.current?.click()}
-            className="h-40 border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center text-white/50 bg-white/5 cursor-pointer hover:bg-white/10 transition-all group overflow-hidden"
-          >
-            {content.startsWith('data:image') && activeTab === 'image' ? (
-               <img src={content} className="h-full w-full object-cover" />
-            ) : (
-              <>
-                <p className="text-3xl mb-1 group-hover:scale-110 transition-transform">📄</p>
-                <p className="text-[10px] font-black uppercase tracking-widest opacity-60">{fileName || `Tap to select ${activeTab.toUpperCase()}`}</p>
-              </>
+          <div className="space-y-3">
+            <textarea 
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              className="w-full h-40 bg-white/5 rounded-xl p-4 focus:outline-none border-2 border-transparent focus:border-brand-lime transition-all text-sm font-medium placeholder:text-white/10"
+              placeholder="Paste your learning materials, notes, or paragraphs here..."
+            />
+            {content.trim() && (
+              <div className="flex gap-2">
+                <button 
+                  onClick={handleDownloadDocPdf}
+                  className="flex-1 glass py-2 rounded-xl text-[10px] font-black uppercase text-brand-lime border-brand-lime/20 hover:bg-brand-lime/10"
+                >
+                  📄 Download PDF
+                </button>
+                <button 
+                  onClick={handleSaveDocToHistory}
+                  className="flex-1 glass py-2 rounded-xl text-[10px] font-black uppercase text-white/60 hover:bg-white/10"
+                >
+                  📁 Save Doc
+                </button>
+              </div>
             )}
-            <input type="file" ref={fileInputRef} className="hidden" accept={activeTab === 'pdf' ? "application/pdf" : "image/*"} onChange={(e) => handleFileUpload(e, activeTab === 'pdf' ? 'pdf' : 'image')} />
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              className="h-40 border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center text-white/50 bg-white/5 cursor-pointer hover:bg-white/10 transition-all group overflow-hidden"
+            >
+              {content.startsWith('data:image') && activeTab === 'image' ? (
+                 <img src={content} className="h-full w-full object-contain" />
+              ) : (
+                <>
+                  <p className="text-3xl mb-1 group-hover:scale-110 transition-transform">📄</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest opacity-60">{fileName || `Tap to select ${activeTab.toUpperCase()}`}</p>
+                </>
+              )}
+              <input type="file" ref={fileInputRef} className="hidden" accept={activeTab === 'pdf' ? "application/pdf" : "image/*"} onChange={(e) => handleFileUpload(e, activeTab === 'pdf' ? 'pdf' : 'image')} />
+            </div>
+            
+            {activeTab === 'image' && content.startsWith('data:image') && (
+              <ThreeDButton 
+                variant="secondary" 
+                className="w-full py-3 text-[10px]" 
+                onClick={handleExtractText}
+                disabled={ocrLoading}
+              >
+                {ocrLoading ? "Extracting Text... 🧠" : "Extract Text & Edit 📝"}
+              </ThreeDButton>
+            )}
           </div>
         )}
         

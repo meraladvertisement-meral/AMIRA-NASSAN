@@ -1,7 +1,7 @@
 
 export type QuestionType = 'MCQ' | 'TF' | 'FITB';
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'mixed';
-export type QuizSource = 'ai' | 'manual';
+export type QuizSource = 'ai' | 'manual' | 'document';
 
 export interface QuizSettings {
   difficulty: Difficulty;
@@ -35,6 +35,8 @@ export interface QuizRecord {
   pdfGenerated?: boolean;
   pdfUrl?: string;
   source?: QuizSource;
+  sourceText?: string;
+  title?: string;
 }
 
 export interface QuizResult {

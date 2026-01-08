@@ -17,9 +17,9 @@ const LoadingPage: React.FC<LoadingPageProps> = ({ t, error, onCancel, onRetry, 
 
   const stages = useMemo(() => [
     { id: 0, label: t.appName === 'SnapQuizGame' ? "Ingesting Data" : "Daten einlesen", icon: "📥", threshold: 0 },
-    { id: 1, label: t.appName === 'SnapQuizGame' ? "Neural Analysis" : "Neuronale Analyse", icon: "🧠", threshold: 25 },
-    { id: 2, label: t.appName === 'SnapQuizGame' ? "Crafting Questions" : "Fragen erstellen", icon: "✍️", threshold: 60 },
-    { id: 3, label: t.appName === 'SnapQuizGame' ? "Final Polish" : "Letzter Feinschliff", icon: "✨", threshold: 85 },
+    { id: 1, label: t.appName === 'SnapQuizGame' ? "Neural Analysis" : "Neuronale Analyse", icon: "🧠", threshold: 20 },
+    { id: 2, label: t.appName === 'SnapQuizGame' ? "Crafting Questions" : "Fragen erstellen", icon: "✍️", threshold: 50 },
+    { id: 3, label: t.appName === 'SnapQuizGame' ? "Final Polish" : "Letzter Feinschliff", icon: "✨", threshold: 80 },
   ], [t.appName]);
 
   const techLogs = [
@@ -32,35 +32,42 @@ const LoadingPage: React.FC<LoadingPageProps> = ({ t, error, onCancel, onRetry, 
     "GEMINI_PRO_THINKING_V3",
     "UI_COMPONENT_PREFLIGHT",
     "LEVELLING_DIFFICULTY...",
-    "PACKING_JSON_PAYLOAD"
+    "PACKING_JSON_PAYLOAD",
+    "BUFFER_FLUSH_COMPLETE",
+    "VECTOR_SPACE_MAPPING"
   ];
 
-  // Percentage Simulation & Stage Trigger
+  // Accelerated Progress Simulation
   useEffect(() => {
     if (error) return;
     const interval = setInterval(() => {
       setProgress(prev => {
-        if (prev >= 99.8) return prev;
-        // Natural ease-out progression
-        const increment = prev < 40 ? Math.random() * 4 : prev < 75 ? Math.random() * 1.5 : Math.random() * 0.4;
-        const next = Math.min(99.8, prev + increment);
+        if (prev >= 99.9) return prev;
         
-        // Update active stage based on thresholds
+        // Faster initial jump, smoother middle, slow down only at the very end
+        let increment = 0;
+        if (prev < 30) increment = Math.random() * 6; // Initial burst
+        else if (prev < 70) increment = Math.random() * 2.5; // Steady progress
+        else if (prev < 90) increment = Math.random() * 0.8; // Refining
+        else increment = Math.random() * 0.15; // Final safety crawl
+        
+        const next = Math.min(99.9, prev + increment);
+        
         const currentStage = stages.reduce((acc, stage) => next >= stage.threshold ? stage.id : acc, 0);
         if (currentStage !== activeStage) setActiveStage(currentStage);
         
         return next;
       });
-    }, 200);
+    }, 150); // Faster refresh rate for smoother bar
     return () => clearInterval(interval);
   }, [error, activeStage, stages]);
 
-  // Console Activity Log
+  // High-frequency log activity for "active" feeling
   useEffect(() => {
     if (error) return;
     const logInterval = setInterval(() => {
-      setLogs(prev => [...prev.slice(-4), techLogs[Math.floor(Math.random() * techLogs.length)]]);
-    }, 800);
+      setLogs(prev => [...prev.slice(-5), techLogs[Math.floor(Math.random() * techLogs.length)]]);
+    }, 450); // Doubled speed of log updates
     return () => clearInterval(logInterval);
   }, [error]);
 
@@ -84,7 +91,7 @@ const LoadingPage: React.FC<LoadingPageProps> = ({ t, error, onCancel, onRetry, 
 
   return (
     <div className="h-screen flex flex-col items-center justify-center p-6 text-center relative overflow-hidden bg-[#050b1a]">
-      {/* Dynamic Background */}
+      {/* Hyper-Speed Background Decor */}
       <div className="absolute inset-0 opacity-20 pointer-events-none">
         <div className="absolute inset-0 animate-pulse-slow">
           <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -98,19 +105,19 @@ const LoadingPage: React.FC<LoadingPageProps> = ({ t, error, onCancel, onRetry, 
           </svg>
         </div>
         
-        {/* Floating Data Bits */}
-        {[...Array(15)].map((_, i) => (
+        {/* Rapid Floating Data Bits */}
+        {[...Array(20)].map((_, i) => (
           <div 
             key={i} 
-            className="absolute font-mono text-[10px] text-brand-lime/30 animate-float-up pointer-events-none"
+            className="absolute font-mono text-[10px] text-brand-lime/40 animate-float-up pointer-events-none"
             style={{
               left: `${Math.random() * 100}%`,
               bottom: '-50px',
-              animationDuration: `${Math.random() * 5 + 3}s`,
-              animationDelay: `${Math.random() * 5}s`
+              animationDuration: `${Math.random() * 3 + 2}s`, // Faster movement
+              animationDelay: `${Math.random() * 3}s`
             }}
           >
-            {Math.random() > 0.5 ? '01' : '10'}
+            {Math.random() > 0.5 ? '1101' : '0010'}
           </div>
         ))}
       </div>
@@ -118,27 +125,25 @@ const LoadingPage: React.FC<LoadingPageProps> = ({ t, error, onCancel, onRetry, 
       <div className="relative z-10 w-full max-w-md flex flex-col items-center">
         {/* Rocket Launch Core */}
         <div className="relative mb-12">
-          {/* Energy Halo */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-brand-lime/10 blur-[80px] rounded-full animate-pulse-fast"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-brand-lime/15 blur-[80px] rounded-full animate-pulse-fast"></div>
           
-          <div className="text-[120px] drop-shadow-[0_0_30px_rgba(132,204,22,0.6)] animate-thrust relative z-10">
+          <div className="text-[120px] drop-shadow-[0_0_40px_rgba(132,204,22,0.8)] animate-thrust relative z-10 select-none">
             🚀
           </div>
 
-          {/* Scanning Laser */}
           <div className="absolute inset-0 w-full h-full border border-white/5 rounded-full pointer-events-none overflow-hidden">
-            <div className="absolute top-0 left-[-50%] w-[200%] h-0.5 bg-gradient-to-r from-transparent via-brand-lime to-transparent animate-scan shadow-[0_0_10px_#84cc16]"></div>
+            <div className="absolute top-0 left-[-50%] w-[200%] h-1 bg-gradient-to-r from-transparent via-brand-lime to-transparent animate-scan shadow-[0_0_15px_#84cc16]"></div>
           </div>
         </div>
 
         {/* Stage Tracker */}
-        <div className="flex gap-2 mb-10 w-full px-4">
+        <div className="flex gap-2 mb-8 w-full px-4">
           {stages.map((stage) => {
             const isCompleted = progress > (stages[stage.id + 1]?.threshold || 100);
             const isActive = activeStage === stage.id;
             return (
               <div key={stage.id} className="flex-1 flex flex-col items-center gap-2 group">
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all duration-500 border-2 ${
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all duration-300 border-2 ${
                   isCompleted ? 'bg-brand-lime border-brand-lime text-brand-dark' : 
                   isActive ? 'bg-white/10 border-brand-lime text-brand-lime shadow-[0_0_15px_rgba(132,204,22,0.3)] scale-110' : 
                   'bg-white/5 border-white/5 text-white/20'
@@ -154,27 +159,27 @@ const LoadingPage: React.FC<LoadingPageProps> = ({ t, error, onCancel, onRetry, 
         </div>
 
         {/* Console Activity Log */}
-        <div className="w-full h-24 mb-10 glass border-white/10 bg-black/60 rounded-[2rem] p-5 overflow-hidden text-left font-mono text-[9px] text-brand-lime/40 leading-relaxed shadow-inner">
+        <div className="w-full h-28 mb-8 glass border-white/10 bg-black/60 rounded-[2rem] p-5 overflow-hidden text-left font-mono text-[9px] text-brand-lime/40 leading-relaxed shadow-inner">
            {logs.map((log, i) => (
-             <div key={i} className="animate-in slide-in-from-bottom-2 duration-300 flex items-center gap-2">
-               <span className="text-white/10">0x{Math.floor(Math.random()*1000)}</span>
+             <div key={i} className="animate-in slide-in-from-bottom-2 duration-200 flex items-center gap-2">
+               <span className="text-white/5">0x{Math.floor(Math.random()*1000).toString(16).toUpperCase()}</span>
                <span className="text-brand-lime/60 flex-1 truncate">{log}</span>
                <span className="text-brand-lime/20">{Math.floor(progress)}%</span>
              </div>
            ))}
         </div>
 
-        {/* High-Fidelity Progress Bar */}
-        <div className="w-full space-y-3 mb-12">
+        {/* Enhanced Progress Bar */}
+        <div className="w-full space-y-3 mb-10">
           <div className="flex justify-between items-end px-2">
             <div className="text-left">
-              <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] mb-1">Current Task</p>
+              <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] mb-1">AI Engine Status</p>
               <p className="text-sm font-black text-brand-lime uppercase tracking-widest animate-pulse">
                 {stages[activeStage].label}...
               </p>
             </div>
             <div className="text-right">
-              <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] mb-1">AI Load</p>
+              <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] mb-1">Hyper-Load</p>
               <p className="text-2xl font-black text-white italic drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
                 {Math.floor(progress)}<span className="text-xs opacity-50 ml-0.5">%</span>
               </p>
@@ -183,13 +188,13 @@ const LoadingPage: React.FC<LoadingPageProps> = ({ t, error, onCancel, onRetry, 
           
           <div className="relative w-full h-4 bg-white/5 rounded-full border border-white/10 p-0.5 overflow-hidden shadow-inner">
             <div 
-              className="h-full bg-gradient-to-r from-brand-lime via-brand-lime to-brand-gold rounded-full relative transition-all duration-300 ease-out shadow-[0_0_20px_rgba(132,204,22,0.3)]"
+              className="h-full bg-gradient-to-r from-brand-lime via-brand-lime to-brand-gold rounded-full relative transition-all duration-300 ease-out shadow-[0_0_20px_rgba(132,204,22,0.4)]"
               style={{ width: `${progress}%` }}
             >
-              <div className="absolute inset-0 bg-white/10 h-1/2 rounded-full m-0.5"></div>
+              <div className="absolute inset-0 bg-white/10 h-1/2 rounded-full m-0.5 opacity-50"></div>
               {/* Particle Spark at end of bar */}
-              <div className="absolute right-[-4px] top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full blur-md opacity-70"></div>
-              {/* Bar Shine */}
+              <div className="absolute right-[-6px] top-1/2 -translate-y-1/2 w-5 h-5 bg-white rounded-full blur-lg opacity-80"></div>
+              {/* Bar Shine - Faster */}
               <div className="absolute inset-0 w-32 bg-gradient-to-r from-transparent via-white/40 to-transparent -skew-x-20 animate-shine-move"></div>
             </div>
           </div>
@@ -209,9 +214,9 @@ const LoadingPage: React.FC<LoadingPageProps> = ({ t, error, onCancel, onRetry, 
       <style>{`
         @keyframes thrust {
           0%, 100% { transform: translateY(0) rotate(0); }
-          25% { transform: translateY(-3px) rotate(-1deg); }
-          50% { transform: translateY(0) rotate(1deg); }
-          75% { transform: translateY(3px) rotate(-0.5deg); }
+          25% { transform: translateY(-4px) rotate(-1.5deg); }
+          50% { transform: translateY(0) rotate(1.5deg); }
+          75% { transform: translateY(4px) rotate(-0.8deg); }
         }
         @keyframes scan {
           0%, 100% { top: 0%; opacity: 0; }
@@ -220,23 +225,23 @@ const LoadingPage: React.FC<LoadingPageProps> = ({ t, error, onCancel, onRetry, 
         }
         @keyframes float-up {
           0% { transform: translateY(0) scale(1); opacity: 0; }
-          20% { opacity: 0.4; }
-          80% { opacity: 0.4; }
-          100% { transform: translateY(-110vh) scale(0.5); opacity: 0; }
+          20% { opacity: 0.5; }
+          80% { opacity: 0.5; }
+          100% { transform: translateY(-110vh) scale(0.6); opacity: 0; }
         }
         @keyframes shine-move {
-          0% { left: -200%; }
-          100% { left: 400%; }
+          0% { left: -250%; }
+          100% { left: 450%; }
         }
         @keyframes pulse-fast {
           0%, 100% { opacity: 0.2; transform: translate(-50%, -50%) scale(1); }
-          50% { opacity: 0.5; transform: translate(-50%, -50%) scale(1.1); }
+          50% { opacity: 0.6; transform: translate(-50%, -50%) scale(1.15); }
         }
-        .animate-thrust { animation: thrust 0.1s linear infinite; }
-        .animate-scan { animation: scan 3s ease-in-out infinite; }
+        .animate-thrust { animation: thrust 0.08s linear infinite; }
+        .animate-scan { animation: scan 2.5s ease-in-out infinite; }
         .animate-float-up { animation: float-up linear infinite; }
-        .animate-shine-move { animation: shine-move 2s infinite linear; }
-        .animate-pulse-fast { animation: pulse-fast 1s ease-in-out infinite; }
+        .animate-shine-move { animation: shine-move 1.5s infinite linear; }
+        .animate-pulse-fast { animation: pulse-fast 0.8s ease-in-out infinite; }
         .animate-pulse-slow { animation: pulse 6s ease-in-out infinite; }
       `}</style>
     </div>

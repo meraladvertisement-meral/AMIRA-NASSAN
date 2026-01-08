@@ -1,4 +1,3 @@
-
 import { Language } from '../i18n';
 
 export type LegalDocType = 'terms' | 'privacy' | 'impressum' | 'contact' | 'affiliate';
@@ -35,7 +34,7 @@ export const legalService = {
           <strong>Content Data:</strong> Text/PDFs uploaded for quiz generation are processed via Google Gemini API. We do not store this raw content permanently after the quiz is generated.</p>
           
           <h3 class="font-bold text-brand-lime">3. Your Rights</h3>
-          <p class="mb-4">You have the right to access, correct, or delete your personal data at any time. Contact us at digitalsecrets635@gmail.com for data requests.</p>
+          <p class="mb-4">You have the right to access, correct, or delete your personal data at any time. Contact us at info@snapquizgame.app for data requests.</p>
         `,
         impressum: `
           <h2 class="text-xl font-bold mb-4">Impressum</h2>
@@ -50,7 +49,7 @@ export const legalService = {
             </div>
             <div>
               <p class="font-bold uppercase text-brand-lime text-[10px] tracking-widest">Contact / Kontakt</p>
-              <p>E-Mail: <span class="text-white underline">digitalsecrets635@gmail.com</span></p>
+              <p>E-Mail: <span class="text-white underline">info@snapquizgame.app</span></p>
             </div>
             <div>
               <p class="font-bold uppercase text-brand-lime text-[10px] tracking-widest">Business Form / Unternehmensform</p>
@@ -76,7 +75,7 @@ export const legalService = {
           <div class="mt-6 p-6 glass rounded-2xl border-brand-lime/20">
             <p class="text-brand-lime font-bold mb-2">Frau Nassan</p>
             <p class="text-white/80">Kippenbergstraße 26<br>04317 Leipzig</p>
-            <p class="mt-4 font-mono text-sm">Email: digitalsecrets635@gmail.com</p>
+            <p class="mt-4 font-mono text-sm">Email: info@snapquizgame.app</p>
           </div>
         `,
         affiliate: `
@@ -115,6 +114,9 @@ export const legalService = {
           
           <h3 class="font-bold text-brand-lime">2. Erhobene Daten</h3>
           <p class="mb-4">Wir speichern Ihren Namen und Ihre E-Mail-Adresse (via Google Login), um Ihr Konto und Ihre Abonnements zu verwalten.</p>
+          
+          <h3 class="font-bold text-brand-lime">3. Ihre Rechte</h3>
+          <p class="mb-4">Sie haben das Recht auf Auskunft, Berichtigung oder Löschung Ihrer Daten. Kontaktieren Sie uns unter info@snapquizgame.app.</p>
         `,
         impressum: `
           <h2 class="text-xl font-bold mb-4">Impressum</h2>
@@ -129,7 +131,7 @@ export const legalService = {
             </div>
             <div>
               <p class="font-bold uppercase text-brand-lime text-[10px] tracking-widest">Kontakt</p>
-              <p>E-Mail: <span class="text-white underline">digitalsecrets635@gmail.com</span></p>
+              <p>E-Mail: <span class="text-white underline">info@snapquizgame.app</span></p>
             </div>
             <div>
               <p class="font-bold uppercase text-brand-lime text-[10px] tracking-widest">Unternehmensform</p>
@@ -155,7 +157,7 @@ export const legalService = {
           <div class="mt-6 p-6 glass rounded-2xl border-brand-lime/20">
             <p class="text-brand-lime font-bold mb-2">Frau Nassan</p>
             <p class="text-white/80">Kippenbergstraße 26<br>04317 Leipzig</p>
-            <p class="mt-4 font-mono text-sm">E-Mail: digitalsecrets635@gmail.com</p>
+            <p class="mt-4 font-mono text-sm">E-Mail: info@snapquizgame.app</p>
           </div>
         `,
         affiliate: `

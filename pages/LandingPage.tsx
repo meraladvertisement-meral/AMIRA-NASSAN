@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { GlassCard } from '../components/layout/GlassCard';
 import { ThreeDButton } from '../components/layout/ThreeDButton';
@@ -10,7 +11,7 @@ interface LandingPageProps {
   lang: Language;
   setLang: (l: Language) => void;
   t: any;
-  onOpenLegal: () => void;
+  onOpenLegal: (section: string) => void;
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({ onNext, onGuest, onAdmin, lang, setLang, t, onOpenLegal }) => {
@@ -19,17 +20,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNext, onGuest, onAdmin, lan
       {/* Background Decor */}
       <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-brand-lime opacity-20 blur-[100px] rounded-full pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-64 h-64 bg-brand-gold opacity-10 blur-[100px] rounded-full pointer-events-none"></div>
-
-      <div className="absolute top-6 right-6 flex gap-2 z-20">
-        <button 
-          onClick={() => setLang('en')}
-          className={`px-3 py-1 rounded-full text-sm font-bold transition ${lang === 'en' ? 'bg-white text-brand-dark shadow-lg' : 'bg-white/20 text-white hover:bg-white/30'}`}
-        >EN</button>
-        <button 
-          onClick={() => setLang('de')}
-          className={`px-3 py-1 rounded-full text-sm font-bold transition ${lang === 'de' ? 'bg-white text-brand-dark shadow-lg' : 'bg-white/20 text-white hover:bg-white/30'}`}
-        >DE</button>
-      </div>
 
       <div className="flex flex-col items-center mb-8 animate-float z-10 pointer-events-none text-center">
         <div className="w-40 h-40 md:w-56 md:h-56 logo-circle bg-white mb-6 flex items-center justify-center relative shadow-[0_20px_50px_rgba(0,0,0,0.4)]">
@@ -71,12 +61,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNext, onGuest, onAdmin, lan
         </div>
       </GlassCard>
 
-      {/* Fixed Legal Footer */}
       <footer className="fixed bottom-0 left-0 w-full p-6 bg-brand-dark/20 backdrop-blur-xl z-40 border-t border-white/5">
-        <div className="flex justify-center gap-8 text-white/50 text-[10px] font-bold uppercase tracking-[0.2em]">
-          <button onClick={onOpenLegal} className="hover:text-brand-lime transition-colors">{t.terms}</button>
-          <button onClick={onOpenLegal} className="hover:text-brand-lime transition-colors">{t.privacy}</button>
-          <button onClick={onOpenLegal} className="hover:text-brand-lime transition-colors">{t.impressum}</button>
+        <div className="flex justify-center gap-4 md:gap-8 text-white/50 text-[10px] font-bold uppercase tracking-[0.2em] flex-wrap text-center">
+          <button onClick={() => onOpenLegal('terms')} className="hover:text-brand-lime transition-colors">{t.terms}</button>
+          <button onClick={() => onOpenLegal('privacy')} className="hover:text-brand-lime transition-colors">{t.privacy}</button>
+          <button onClick={() => onOpenLegal('affiliate')} className="hover:text-brand-lime transition-colors">{t.affiliate}</button>
+          <button onClick={() => onOpenLegal('support')} className="hover:text-brand-lime transition-colors">{t.support}</button>
+          <button onClick={() => onOpenLegal('impressum')} className="hover:text-brand-lime transition-colors">{t.impressum}</button>
         </div>
       </footer>
     </div>

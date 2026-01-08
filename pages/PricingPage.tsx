@@ -14,161 +14,189 @@ const PricingPage: React.FC<PricingPageProps> = ({ onBack, t }) => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [entitlement, setEntitlement] = useState<Entitlement>(billingService.getEntitlement());
   
-  // تحديث البيانات عند تحميل الصفحة
   useEffect(() => {
     setEntitlement(billingService.getEntitlement());
   }, []);
 
-  const plans = [
+  const subscriptionPlans = [
     { 
       id: 'plus', 
       name: 'Plus', 
       monthly: 8.99, 
       yearly: 89.90,
-      features: [
-        '200 plays / month', 
-        '20 Teacher quizzes / month',
-        'Priority AI Generation'
-      ] 
+      fullYearlyPrice: 107.88,
+      features: t.plusFeatures
     },
     { 
       id: 'unlimited', 
       name: 'Unlimited', 
       monthly: 18.99, 
       yearly: 189.90,
-      features: [
-        'Unlimited plays (Fair Use)', 
-        '60 Teacher quizzes / month',
-        'Custom PDF Branding'
-      ] 
+      fullYearlyPrice: 227.88,
+      features: t.unlimitedFeatures
     },
+  ];
+
+  const playPacks = [
+    { id: 'starter_pack', name: '🎖 Starter Pack', count: 20, price: 4.49 },
+    { id: 'pro_pack', name: '🥈 Pro Pack', count: 100, price: 13.99 },
+    { id: 'master_pack', name: '🥇 Master Pack', count: 250, price: 27.99, isBestSeller: true }
   ];
 
   const handleSubscribe = (planId: string) => {
     const ent = billingService.getEntitlement();
-    // محاكاة عملية شراء ناجحة
     ent.planId = planId as any;
     ent.subscriptionStartAt = Date.now();
     ent.cycle = billingCycle;
     billingService.save(ent);
     setEntitlement({ ...ent });
-    alert(t.appName === 'سناب كويز' ? "تم تفعيل الاشتراك بنجاح!" : "Subscription Activated Successfully!");
+    alert(t.subActivated);
+  };
+
+  const handleBuyPack = (count: number) => {
+    billingService.addPack(count);
+    setEntitlement(billingService.getEntitlement());
+    alert(t.playsAdded.replace('{count}', count.toString()));
   };
 
   const handleCancel = () => {
     const ent = billingService.getEntitlement();
-    const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
-    const isWithinRefundingPeriod = ent.subscriptionStartAt && (Date.now() - ent.subscriptionStartAt < fourteenDaysMs);
-
-    if (isWithinRefundingPeriod) {
-      // قانون الاتحاد الأوروبي: حق الانسحاب خلال 14 يوماً
-      const confirmRefund = confirm(
-        t.appName === 'سناب كويز' 
-        ? "أنت لا تزال في فترة الـ 14 يوماً القانونية. هل تريد إلغاء الاشتراك واسترداد كامل المبلغ؟" 
-        : "You are within the legal 14-day withdrawal period. Would you like to cancel and receive a FULL REFUND?"
-      );
-      if (confirmRefund) {
-        ent.planId = 'free';
-        ent.subscriptionStartAt = undefined;
-        billingService.save(ent);
-        setEntitlement({ ...ent });
-        alert(t.appName === 'سناب كويز' ? "تم الإلغاء بنجاح وسيتم استرداد المبلغ." : "Subscription cancelled. Your refund is being processed.");
-      }
-    } else {
-      // إلغاء عادي للتجديد التلقائي
-      const confirmCancel = confirm(
-        t.appName === 'سناب كويز' 
-        ? "سيتم إيقاف التجديد التلقائي. ستظل المميزات متاحة حتى نهاية الفترة الحالية. هل أنت متأكد؟" 
-        : "Auto-renewal will be stopped. Features remain active until the end of the current cycle. Confirm?"
-      );
-      if (confirmCancel) {
-        ent.planId = 'free'; 
-        billingService.save(ent);
-        setEntitlement({ ...ent });
-        alert(t.appName === 'سناب كويز' ? "تم إيقاف التجديد التلقائي." : "Auto-renewal has been disabled.");
-      }
+    const confirmCancel = confirm(t.cancelSubConfirm);
+    if (confirmCancel) {
+      ent.planId = 'free'; 
+      billingService.save(ent);
+      setEntitlement({ ...ent });
     }
   };
 
   return (
-    <div className="p-6 max-w-lg mx-auto min-h-screen flex flex-col gap-6 pb-24">
+    <div className="p-6 max-w-lg mx-auto min-h-screen flex flex-col gap-6 pb-24 custom-scrollbar overflow-y-auto">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-black italic tracking-tighter">{t.pricing}</h2>
-          <p className="text-[10px] text-white/40 uppercase font-black tracking-widest mt-1">Manage your plan</p>
+          <p className="text-[10px] text-white/40 uppercase font-black tracking-widest mt-1">Upgrade your experience</p>
         </div>
         <button onClick={onBack} className="glass w-12 h-12 flex items-center justify-center rounded-2xl text-xl active:scale-90 transition shadow-lg">←</button>
       </div>
 
-      {/* تبديل الدورة المحاسبية */}
-      <div className="flex bg-white/10 p-1 rounded-2xl border border-white/5">
-        <button 
-          onClick={() => setBillingCycle('monthly')} 
-          className={`flex-1 py-2.5 rounded-xl font-bold text-xs uppercase transition ${billingCycle === 'monthly' ? 'bg-white text-brand-dark shadow-lg' : 'text-white/40'}`}
-        >Monthly</button>
-        <button 
-          onClick={() => setBillingCycle('yearly')} 
-          className={`flex-1 py-2.5 rounded-xl font-bold text-xs uppercase transition ${billingCycle === 'yearly' ? 'bg-white text-brand-dark shadow-lg' : 'text-white/40'}`}
-        >Yearly <span className="text-[8px] opacity-70">(Save 20%)</span></button>
+      {/* Subscription Section */}
+      <div className="space-y-4">
+        <h3 className="text-sm font-black uppercase text-brand-lime tracking-widest ml-1">{t.subscriptions}</h3>
+        <div className="flex bg-white/10 p-1 rounded-2xl border border-white/5">
+          <button 
+            onClick={() => setBillingCycle('monthly')} 
+            className={`flex-1 py-2 rounded-xl font-bold text-xs uppercase transition ${billingCycle === 'monthly' ? 'bg-white text-brand-dark shadow-lg' : 'text-white/40'}`}
+          >{t.monthly}</button>
+          <button 
+            onClick={() => setBillingCycle('yearly')} 
+            className={`flex-1 py-2 rounded-xl font-bold text-xs uppercase transition ${billingCycle === 'yearly' ? 'bg-white text-brand-dark shadow-lg' : 'text-white/40'}`}
+          >{t.yearly} <span className="text-[8px] opacity-70">(-20%)</span></button>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4">
+          {subscriptionPlans.map(p => {
+            const isActive = entitlement.planId === p.id;
+            const currentPrice = billingCycle === 'monthly' ? p.monthly : p.yearly;
+            const showDiscount = billingCycle === 'yearly';
+
+            return (
+              <GlassCard key={p.id} className={`relative border-white/10 ${isActive ? 'border-brand-lime border-2' : ''}`}>
+                <h3 className="text-xl font-black mb-2">{p.name}</h3>
+                
+                <div className="relative flex items-center mb-6 pt-4 h-20">
+                  <div className="flex items-baseline">
+                    <p className="text-4xl font-black text-brand-lime leading-none">€{currentPrice}</p>
+                    <span className="text-[10px] text-white/30 ml-1 font-black uppercase tracking-widest">
+                      {billingCycle === 'monthly' ? '/mo' : '/yr'}
+                    </span>
+                  </div>
+                  
+                  {showDiscount && (
+                    <div className="absolute top-0 right-2 transform -translate-y-1/4 rotate-[15deg] pointer-events-none">
+                      <span className="text-3xl font-black text-red-600 line-through decoration-[3px] drop-shadow-[0_0_10px_rgba(220,38,38,0.4)] italic">
+                        €{p.fullYearlyPrice}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <ul className="text-[11px] space-y-1 mb-6 opacity-80">
+                  {p.features.map((f: string) => <li key={f}>• {f}</li>)}
+                </ul>
+                <ThreeDButton 
+                  variant={isActive ? 'danger' : 'primary'} 
+                  className="w-full py-3 text-sm" 
+                  onClick={() => isActive ? handleCancel() : handleSubscribe(p.id)}
+                >
+                  {isActive ? t.cancelSub : t.subscribe}
+                </ThreeDButton>
+              </GlassCard>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="space-y-4">
-        {plans.map(p => {
-          const isActive = entitlement.planId === p.id;
-          return (
-            <GlassCard key={p.id} className={`relative transition-all duration-500 overflow-hidden ${isActive ? 'border-brand-lime border-2 shadow-[0_0_30px_rgba(132,204,22,0.2)] scale-[1.02]' : 'border-white/10 opacity-80'}`}>
-              {isActive && (
-                <div className="absolute top-0 right-0 bg-brand-lime text-brand-dark text-[8px] font-black px-4 py-1.5 uppercase tracking-widest rounded-bl-xl shadow-lg">
-                  Active Plan
+      {/* Prepaid Play Packs Section */}
+      <div className="space-y-4 pt-4 border-t border-white/10">
+        <h3 className="text-sm font-black uppercase text-brand-gold tracking-widest ml-1">{t.prepaidPacks}</h3>
+        
+        <div className="glass p-5 rounded-3xl border-brand-gold/20 bg-brand-gold/5 space-y-3">
+          <div className="flex items-start gap-3">
+            <span className="text-xl">ℹ️</span>
+            <div className="space-y-2">
+              <p className="text-[11px] font-black uppercase text-brand-gold tracking-widest">{t.packRules}</p>
+              <ul className="text-[10px] text-white/70 space-y-1.5 leading-relaxed font-medium">
+                <li>• {t.packInfo1}</li>
+                <li>• {t.packInfo2}</li>
+                <li>• <span className="text-red-400 font-bold">{t.packInfo3}</span></li>
+                <li>• <span className="text-red-400 font-bold">{t.packInfo4}</span></li>
+                <li>• {t.packInfo5}</li>
+                <li>• {t.packInfo6}</li>
+                <li>• {t.packInfo7}</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4">
+          {playPacks.map(pack => (
+            <GlassCard 
+              key={pack.id} 
+              className={`relative border-brand-gold/20 hover:border-brand-gold/40 transition-colors ${pack.isBestSeller ? 'border-brand-orange bg-brand-orange/5 ring-1 ring-brand-orange/30 shadow-[0_0_20px_rgba(234,88,12,0.1)]' : ''}`}
+            >
+              {pack.isBestSeller && (
+                <div className="absolute -top-3 -right-3 bg-brand-orange text-white text-[10px] font-black px-4 py-1.5 rounded-full shadow-lg transform rotate-6 animate-pulse z-10">
+                  🔥 {t.bestSeller}
                 </div>
               )}
               
-              <h3 className="text-2xl font-black mb-1">{p.name}</h3>
-              <div className="flex items-baseline gap-1 mb-4">
-                <span className="text-brand-lime font-black text-3xl">
-                  ${billingCycle === 'monthly' ? p.monthly : p.yearly}
-                </span>
-                <span className="text-[10px] text-white/40 font-bold"> / {billingCycle}</span>
+              <div className="flex justify-between items-center mb-4">
+                <div className="space-y-1">
+                  <h3 className="text-lg font-black">{pack.name}</h3>
+                  <span className="bg-brand-gold/20 text-brand-gold px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter">
+                    {t.oneTimePayment || 'One-time Payment'}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-black text-white leading-none">€{pack.price}</p>
+                </div>
               </div>
 
-              <ul className="text-sm text-white/70 space-y-2 mb-8">
-                {p.features.map(f => (
-                  <li key={f} className="flex items-center gap-2">
-                    <span className="text-brand-lime text-xs">✔</span> {f}
-                  </li>
-                ))}
-              </ul>
-              
-              {isActive ? (
-                <ThreeDButton 
-                  variant="danger" 
-                  className="w-full py-4 text-sm" 
-                  onClick={handleCancel}
-                >
-                  {t.appName === 'سناب كويز' ? 'إلغاء الاشتراك' : 'Cancel Subscription'}
-                </ThreeDButton>
-              ) : (
-                <ThreeDButton 
-                  variant={p.id === 'plus' ? 'primary' : 'secondary'} 
-                  className="w-full py-4 text-sm" 
-                  onClick={() => handleSubscribe(p.id)}
-                >
-                  {t.appName === 'سناب كويز' ? 'اشترك الآن' : 'Upgrade Now'}
-                </ThreeDButton>
-              )}
-            </GlassCard>
-          );
-        })}
-      </div>
+              <div className="bg-white/5 rounded-2xl p-4 mb-6 border border-white/5 flex items-center justify-between">
+                <span className="text-xs font-bold text-white/50 uppercase tracking-widest">{t.included || 'Included'}:</span>
+                <span className="text-xl font-black text-brand-gold">{pack.count} {t.solo}</span>
+              </div>
 
-      {/* التذييل القانوني */}
-      <div className="mt-8 p-6 glass rounded-[2rem] border-brand-gold/20 bg-brand-gold/5">
-        <h4 className="text-brand-gold font-black uppercase tracking-widest text-[10px] mb-3 text-center">Consumer Rights (EU/Global)</h4>
-        <p className="text-[10px] text-white/60 leading-relaxed italic text-center">
-          {t.appName === 'سناب كويز' 
-            ? "بصفتك مستخدماً، لديك الحق في إلغاء اشتراكك واسترداد أموالك خلال 14 يوماً من الشراء إذا لم تستخدم الخدمة بشكل مفرط. الإلغاء بعد هذه الفترة يوقف التجديد التلقائي للدورة القادمة."
-            : "As a user, you have the right to cancel and request a refund within 14 days of purchase if the service hasn't been heavily used. Cancellations after this period will stop future auto-renewals."}
-        </p>
+              <ThreeDButton 
+                variant={pack.isBestSeller ? 'primary' : 'warning'} 
+                className="w-full py-4 text-sm" 
+                onClick={() => handleBuyPack(pack.count)}
+              >
+                {t.buyPlays.replace('{count}', pack.count.toString())}
+              </ThreeDButton>
+            </GlassCard>
+          ))}
+        </div>
       </div>
     </div>
   );

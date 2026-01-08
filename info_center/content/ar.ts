@@ -1,4 +1,3 @@
-
 export const infoContent = {
   en: {
     plans: {
@@ -58,12 +57,12 @@ export const infoContent = {
     },
     support: {
       title: "Support / Complaints",
-      email: "digitalsecrets635@gmail.com"
+      email: "info@snapquizgame.app"
     },
     business: {
       title: "Business / Partnerships / Advertising",
       subtitle: "For: Partnerships, Advertising campaigns, Large affiliate deals",
-      contact: "Contact: digitalsecrets635@gmail.com",
+      contact: "Contact: info@snapquizgame.app",
       subject: "Subject line: “Business / Partnership”"
     },
     impressum: {
@@ -71,7 +70,7 @@ export const infoContent = {
       name: "SnapQuizGame",
       owner: "Owner/Responsible: Frau Nassan",
       address: "Kippen Berg Strasse 26, 04317 Leipzig, Germany",
-      email: "Email: digitalsecrets635@gmail.com",
+      email: "Email: info@snapquizgame.app",
       registry: "Registry number: 14713000",
       tax: "Tax/VAT: Will be updated later",
       country: "Country of registration: Germany"
@@ -135,12 +134,12 @@ export const infoContent = {
     },
     support: {
       title: "Support / Beschwerden",
-      email: "digitalsecrets635@gmail.com"
+      email: "info@snapquizgame.app"
     },
     business: {
       title: "Geschäft / Partnerschaften / Werbung",
       subtitle: "Für: Partnerschaften, Werbekampagnen, große Affiliate-Deals",
-      contact: "Kontakt: digitalsecrets635@gmail.com",
+      contact: "Kontakt: info@snapquizgame.app",
       subject: "Betreffzeile: „Business / Partnership“"
     },
     impressum: {
@@ -148,7 +147,7 @@ export const infoContent = {
       name: "SnapQuizGame",
       owner: "Inhaber/Verantwortlich: Frau Nassan",
       address: "Kippen Berg Strasse 26, 04317 Leipzig, Deutschland",
-      email: "E-Mail: digitalsecrets635@gmail.com",
+      email: "E-Mail: info@snapquizgame.app",
       registry: "Registernummer: 14713000",
       tax: "Steuer/MwSt: Wird später aktualisiert",
       country: "Land der Registrierung: Deutschland"

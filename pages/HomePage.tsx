@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { GlassCard } from '../components/layout/GlassCard';
 import { ThreeDButton } from '../components/layout/ThreeDButton';
@@ -9,7 +10,7 @@ interface HomePageProps {
   onHistory: () => void;
   onPricing: () => void;
   onAffiliate: () => void;
-  onInfoCenter: () => void;
+  onInfoCenter: (section: string) => void;
   onLogout: () => void;
   onQuickSnap: () => void;
   t: any;
@@ -126,10 +127,12 @@ const HomePage: React.FC<HomePageProps> = ({
 
       {/* Fixed Legal Footer */}
       <footer className="fixed bottom-0 left-0 w-full p-6 bg-brand-dark/20 backdrop-blur-xl z-40 border-t border-white/5">
-        <div className="flex justify-center gap-8 text-white/50 text-[10px] font-bold uppercase tracking-[0.2em]">
-          <button onClick={onInfoCenter} className="hover:text-brand-lime transition-colors">{t.terms}</button>
-          <button onClick={onInfoCenter} className="hover:text-brand-lime transition-colors">{t.privacy}</button>
-          <button onClick={onInfoCenter} className="hover:text-brand-lime transition-colors">{t.impressum}</button>
+        <div className="flex justify-center gap-4 md:gap-8 text-white/50 text-[10px] font-bold uppercase tracking-[0.2em] flex-wrap text-center">
+          <button onClick={() => onInfoCenter('terms')} className="hover:text-brand-lime transition-colors">{t.terms}</button>
+          <button onClick={() => onInfoCenter('privacy')} className="hover:text-brand-lime transition-colors">{t.privacy}</button>
+          <button onClick={() => onInfoCenter('affiliate')} className="hover:text-brand-lime transition-colors">{t.affiliate}</button>
+          <button onClick={() => onInfoCenter('support')} className="hover:text-brand-lime transition-colors">{t.support}</button>
+          <button onClick={() => onInfoCenter('impressum')} className="hover:text-brand-lime transition-colors">{t.impressum}</button>
         </div>
       </footer>
 

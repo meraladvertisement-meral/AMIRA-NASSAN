@@ -2,46 +2,33 @@
 import { jsPDF } from 'jspdf';
 import { QuizRecord } from '../types/quiz';
 
-const pxPerMm = 3.78; // 96 DPI standard
-// Robust regex for Arabic script characters including presentation forms
+const pxPerMm = 3.78; 
 const ARABIC_REGEX = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
 
 export const pdfService = {
-  /**
-   * Determines if the text contains characters requiring Canvas-based rendering
-   * (e.g., Arabic, special Turkish characters, or Emojis).
-   */
   needsImageRendering(text: string): boolean {
     if (!text) return false;
-    // Use Canvas for any character outside standard Latin-1 or specific RTL scripts
     return /[^\x00-\xFF]/.test(text) || ARABIC_REGEX.test(text);
   },
 
-  /**
-   * Renders complex scripts to a high-resolution PNG via Canvas for inclusion in the PDF.
-   * Handles RTL shaping, bidi text, and word wrapping.
-   */
   renderComplexTextToImage(text: string, maxWidthMm: number, fontPx: number, isBold: boolean): { dataUrl: string, wMm: number, hMm: number } | null {
     if (!text || !text.trim()) return null;
 
     const isRtl = ARABIC_REGEX.test(text);
     const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false }); 
     if (!ctx) return null;
 
-    // Use a scale factor for high-resolution (Retina-like) text quality in the PDF
-    const scaleFactor = 3; 
+    const scaleFactor = 2.5; 
     const maxWidthPx = maxWidthMm * pxPerMm * scaleFactor;
     const scaledFontPx = fontPx * scaleFactor;
     
     const fontWeight = isBold ? '700' : '400';
-    // Use a robust font stack including the app's Fredoka font
     const fontStack = `${fontWeight} ${scaledFontPx}px "Fredoka", "Segoe UI", "Tahoma", "Arial", "sans-serif"`;
     
     ctx.font = fontStack;
     ctx.direction = isRtl ? 'rtl' : 'ltr';
 
-    // Logical word wrapping
     const words = text.split(/\s+/);
     const lines: string[] = [];
     let currentLine = '';
@@ -61,10 +48,12 @@ export const pdfService = {
     lines.push(currentLine);
 
     const lineHeight = scaledFontPx * 1.4;
-    canvas.width = maxWidthPx;
-    canvas.height = Math.max(1, lines.length * lineHeight);
+    canvas.width = Math.ceil(maxWidthPx);
+    canvas.height = Math.ceil(Math.max(1, lines.length * lineHeight));
 
-    // Re-initialize context state after canvas resize
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     ctx.font = fontStack;
     ctx.direction = isRtl ? 'rtl' : 'ltr';
     ctx.textAlign = isRtl ? 'right' : 'left';
@@ -72,24 +61,23 @@ export const pdfService = {
     ctx.fillStyle = '#000000';
 
     lines.forEach((line, index) => {
-      // For RTL, text is anchored at the right edge
       const xPos = isRtl ? canvas.width : 0;
       ctx.fillText(line, xPos, index * lineHeight);
     });
 
     return {
-      dataUrl: canvas.toDataURL('image/png'),
+      dataUrl: canvas.toDataURL('image/jpeg', 0.8), 
       wMm: canvas.width / (pxPerMm * scaleFactor),
       hMm: canvas.height / (pxPerMm * scaleFactor)
     };
   },
 
-  async generateExamPdf(quiz: QuizRecord, includeAnswerKey: boolean = false): Promise<Blob> {
+  async generateDocPdf(title: string, content: string): Promise<Blob> {
     const doc = new jsPDF({
       orientation: 'p',
       unit: 'mm',
       format: 'a4',
-      putOnlyUsedFonts: true
+      compress: true
     });
 
     const margin = 20;
@@ -114,9 +102,8 @@ export const pdfService = {
         if (render) {
           checkPage(render.hMm);
           const isRtl = ARABIC_REGEX.test(text);
-          // For RTL, align the resulting image to the right margin
           const xPos = isRtl ? (pageWidth - margin - render.wMm) : margin;
-          doc.addImage(render.dataUrl, 'PNG', xPos, y, render.wMm, render.hMm);
+          doc.addImage(render.dataUrl, 'JPEG', xPos, y, render.wMm, render.hMm, undefined, 'FAST');
           y += render.hMm + 2;
         }
       } else {
@@ -130,12 +117,74 @@ export const pdfService = {
       }
     };
 
-    // Determine primary language script for headers
+    addTextBlock(title || "Document", 20, true);
+    y += 5;
+    doc.setDrawColor(220);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 10;
+
+    // Split content by paragraphs
+    const paragraphs = content.split('\n');
+    for (const p of paragraphs) {
+      if (p.trim()) {
+        addTextBlock(p, 11);
+      } else {
+        y += 5; // Paragraph spacing
+      }
+    }
+
+    return doc.output('blob');
+  },
+
+  async generateExamPdf(quiz: QuizRecord, includeAnswerKey: boolean = false): Promise<Blob> {
+    const doc = new jsPDF({
+      orientation: 'p',
+      unit: 'mm',
+      format: 'a4',
+      compress: true
+    });
+
+    const margin = 20;
+    let y = margin;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const contentWidth = pageWidth - (margin * 2);
+
+    const checkPage = (heightNeeded: number) => {
+      if (y + heightNeeded > 275) {
+        doc.addPage();
+        y = margin;
+        return true;
+      }
+      return false;
+    };
+
+    const addTextBlock = (text: string, fontSize: number, isBold: boolean = false) => {
+      if (!text || !text.trim()) return;
+
+      if (this.needsImageRendering(text)) {
+        const render = this.renderComplexTextToImage(text, contentWidth, fontSize * 1.2, isBold);
+        if (render) {
+          checkPage(render.hMm);
+          const isRtl = ARABIC_REGEX.test(text);
+          const xPos = isRtl ? (pageWidth - margin - render.wMm) : margin;
+          doc.addImage(render.dataUrl, 'JPEG', xPos, y, render.wMm, render.hMm, undefined, 'FAST');
+          y += render.hMm + 2;
+        }
+      } else {
+        doc.setFontSize(fontSize);
+        doc.setFont("helvetica", isBold ? "bold" : "normal");
+        const lines = doc.splitTextToSize(text, contentWidth);
+        const textHeight = lines.length * (fontSize * 0.5);
+        checkPage(textHeight + 5);
+        doc.text(lines, margin, y + (fontSize * 0.3));
+        y += textHeight + 4;
+      }
+    };
+
     const sampleText = quiz.questions[0]?.prompt || '';
     const isAr = ARABIC_REGEX.test(sampleText);
     
-    // Header
-    const titleText = isAr ? 'SnapQuizGame — امتحان' : 'SnapQuizGame — Exam';
+    const titleText = quiz.title || (isAr ? 'SnapQuizGame — امتحان' : 'SnapQuizGame — Exam');
     addTextBlock(titleText, 22, true);
     addTextBlock(`ID: ${quiz.id} | ${new Date().toLocaleDateString()}`, 10);
     
@@ -150,7 +199,6 @@ export const pdfService = {
     addTextBlock(dateLabel, 12);
     y += 5;
 
-    // Questions
     for (let i = 0; i < quiz.questions.length; i++) {
       const q = quiz.questions[i];
       checkPage(30);
@@ -176,7 +224,6 @@ export const pdfService = {
       y += 4;
     }
 
-    // Answer Key
     if (includeAnswerKey) {
       doc.addPage();
       y = margin;
