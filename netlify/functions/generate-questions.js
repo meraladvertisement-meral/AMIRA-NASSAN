@@ -16,6 +16,7 @@ export const handler = async (event, context) => {
   try {
     const apiKey = process.env.API_KEY;
     if (!apiKey) {
+      console.error("API_KEY is missing in environment variables");
       return { 
         statusCode: 500, 
         headers, 
@@ -26,41 +27,39 @@ export const handler = async (event, context) => {
     const body = JSON.parse(event.body);
     const { content, settings, isImage, language } = body;
     
+    // إنشاء مثيل جديد من المكتبة داخل الدالة لضمان استخدام المفتاح الصحيح
     const ai = new GoogleGenAI({ apiKey });
     
-    const difficultyDesc = settings.difficulty === 'mixed' 
-      ? 'balanced' 
-      : settings.difficulty;
+    const difficultyDesc = settings.difficulty === 'mixed' ? 'balanced' : settings.difficulty;
+    const langName = language === 'ar' ? 'Arabic' : language === 'de' ? 'German' : 'English';
 
-    const systemInstruction = `You are an expert educator. Create a quiz in ${language === 'ar' ? 'Arabic' : language === 'de' ? 'German' : 'English'}.
-    Return ONLY raw JSON. No markdown.
+    const systemInstruction = `You are a professional educator. Create a quiz in ${langName}.
+    Return ONLY valid JSON. Do not include any text before or after the JSON.
     - Question Count: ${settings.questionCount || 10}
     - Difficulty: ${difficultyDesc}
-    - Types: ${(settings.types || ['MCQ']).join(", ")}
-    - IMPORTANT: Ensure all MCQ options are unique and correct answer is included.`;
+    - Question Types: ${(settings.types || ['MCQ']).join(", ")}
+    - IMPORTANT: Ensure MCQ options are unique and clear.`;
 
     const promptText = isImage 
-      ? "Generate a quiz from this image. Ensure options are distinct."
-      : `Generate a quiz from this text. Ensure options are distinct: ${content.substring(0, 8000)}`;
+      ? "Extract the educational content from this image and create a quiz. Make sure choices are clear."
+      : `Analyze the following text and generate a quiz: ${content.substring(0, 10000)}`;
 
-    const contents = { 
-      parts: [{ text: promptText }] 
-    };
+    const parts = [{ text: promptText }];
 
     if (isImage) {
       const base64Data = content.includes('base64,') ? content.split(',')[1] : content;
-      contents.parts.push({
+      parts.push({
         inlineData: { mimeType: "image/jpeg", data: base64Data }
       });
     }
 
-    const result = await ai.models.generateContent({
+    const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-lite-latest",
-      contents,
+      contents: [{ parts }],
       config: {
         systemInstruction,
         responseMimeType: "application/json",
-        temperature: 0.7,
+        temperature: 0.8,
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -85,20 +84,24 @@ export const handler = async (event, context) => {
       },
     });
 
+    const text = response.text;
+    if (!text) throw new Error("AI returned empty response");
+
     return {
       statusCode: 200,
       headers,
-      body: result.text
+      body: text
     };
 
   } catch (error) {
-    console.error("Function Error:", error);
+    console.error("Netlify Function Error:", error);
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({ 
-        error: "GENERATION_FAILED", 
-        message: error.message 
+        error: "SERVER_ERROR", 
+        message: error.message,
+        stack: error.stack 
       })
     };
   }
