@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { GlassCard } from '../components/layout/GlassCard';
 import { ThreeDButton } from '../components/layout/ThreeDButton';
@@ -36,7 +35,7 @@ const HomePage: React.FC<HomePageProps> = ({
   isAdmin
 }) => {
   return (
-    <div className="min-h-screen flex flex-col relative pb-20">
+    <div className="min-h-screen flex flex-col relative pb-28">
       <header className="sticky top-0 z-50 w-full bg-brand-dark/40 backdrop-blur-xl border-b border-white/10 px-6 py-4 flex justify-between items-center shadow-lg">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-brand-lime rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(132,204,22,0.4)]">
@@ -126,7 +125,7 @@ const HomePage: React.FC<HomePageProps> = ({
       </main>
 
       {/* Fixed Legal Footer */}
-      <footer className="fixed bottom-0 left-0 w-full p-4 bg-brand-dark/20 backdrop-blur-md z-40 border-t border-white/5">
+      <footer className="fixed bottom-0 left-0 w-full p-6 bg-brand-dark/20 backdrop-blur-xl z-40 border-t border-white/5">
         <div className="flex justify-center gap-8 text-white/50 text-[10px] font-bold uppercase tracking-[0.2em]">
           <button onClick={onInfoCenter} className="hover:text-brand-lime transition-colors">{t.terms}</button>
           <button onClick={onInfoCenter} className="hover:text-brand-lime transition-colors">{t.privacy}</button>

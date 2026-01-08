@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { GlassCard } from '../components/layout/GlassCard';
 import { ThreeDButton } from '../components/layout/ThreeDButton';
@@ -32,7 +31,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNext, onGuest, onAdmin, lan
         >DE</button>
       </div>
 
-      <div className="flex flex-col items-center mb-8 animate-float z-10 pointer-events-none">
+      <div className="flex flex-col items-center mb-8 animate-float z-10 pointer-events-none text-center">
         <div className="w-40 h-40 md:w-56 md:h-56 logo-circle bg-white mb-6 flex items-center justify-center relative shadow-[0_20px_50px_rgba(0,0,0,0.4)]">
           <svg viewBox="0 0 100 100" className="w-full h-full p-6" xmlns="http://www.w3.org/2000/svg">
             <rect x="20" y="40" width="60" height="40" rx="8" fill="#1e3a8a" />
@@ -73,7 +72,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNext, onGuest, onAdmin, lan
       </GlassCard>
 
       {/* Fixed Legal Footer */}
-      <footer className="fixed bottom-0 left-0 w-full p-6 bg-brand-dark/20 backdrop-blur-md z-40 border-t border-white/5">
+      <footer className="fixed bottom-0 left-0 w-full p-6 bg-brand-dark/20 backdrop-blur-xl z-40 border-t border-white/5">
         <div className="flex justify-center gap-8 text-white/50 text-[10px] font-bold uppercase tracking-[0.2em]">
           <button onClick={onOpenLegal} className="hover:text-brand-lime transition-colors">{t.terms}</button>
           <button onClick={onOpenLegal} className="hover:text-brand-lime transition-colors">{t.privacy}</button>

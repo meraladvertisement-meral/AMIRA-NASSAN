@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 
 export const handler = async (event, context) => {
@@ -9,57 +8,68 @@ export const handler = async (event, context) => {
     'Content-Type': 'application/json'
   };
 
+  // Handle preflight requests
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
   }
 
   try {
+    // Exclusively use process.env.API_KEY as per system instructions
     const apiKey = process.env.API_KEY;
     if (!apiKey) {
-      console.error("API_KEY is missing in environment variables");
+      console.error("CRITICAL: API_KEY is missing in Netlify environment variables.");
       return { 
         statusCode: 500, 
         headers, 
-        body: JSON.stringify({ error: "CONFIG_ERROR", message: "API_KEY is missing." }) 
+        body: JSON.stringify({ 
+          error: "CONFIG_ERROR", 
+          message: "The server is missing the required API key configuration. Please set API_KEY in Netlify settings." 
+        }) 
       };
     }
 
     const body = JSON.parse(event.body);
     const { content, settings, isImage, language } = body;
     
-    // إنشاء مثيل جديد من المكتبة داخل الدالة لضمان استخدام المفتاح الصحيح
+    // Initialize GenAI inside the handler to ensure fresh context/key usage
     const ai = new GoogleGenAI({ apiKey });
     
     const difficultyDesc = settings.difficulty === 'mixed' ? 'balanced' : settings.difficulty;
-    const langName = language === 'ar' ? 'Arabic' : language === 'de' ? 'German' : 'English';
+    const langName = language === 'de' ? 'German' : 'English';
 
-    const systemInstruction = `You are a professional educator. Create a quiz in ${langName}.
-    Return ONLY valid JSON. Do not include any text before or after the JSON.
+    const systemInstruction = `You are a professional educator and assessment specialist. 
+    Create an engaging and accurate educational quiz in ${langName}.
+    
+    Return ONLY valid JSON according to the schema provided. 
+    Do not include any markdown formatting like \`\`\`json.
+    
+    Quiz Requirements:
     - Question Count: ${settings.questionCount || 10}
-    - Difficulty: ${difficultyDesc}
+    - Difficulty Level: ${difficultyDesc}
     - Question Types: ${(settings.types || ['MCQ']).join(", ")}
-    - IMPORTANT: Ensure MCQ options are unique and clear.`;
+    - IMPORTANT: Ensure all Multiple Choice (MCQ) distractors are plausible but clearly incorrect.
+    - IMPORTANT: If types include 'FITB', the prompt MUST contain a blank indicated by '_______'.`;
 
     const promptText = isImage 
-      ? "Extract the educational content from this image and create a quiz. Make sure choices are clear."
-      : `Analyze the following text and generate a quiz: ${content.substring(0, 10000)}`;
+      ? "Analyze the provided image. Extract the educational content and generate a quiz based on the visible facts, diagrams, or text."
+      : `Analyze the following source material and generate a comprehensive quiz: ${content.substring(0, 15000)}`;
 
-    const parts = [{ text: promptText }];
+    const contents = [{ parts: [{ text: promptText }] }];
 
     if (isImage) {
       const base64Data = content.includes('base64,') ? content.split(',')[1] : content;
-      parts.push({
+      contents[0].parts.push({
         inlineData: { mimeType: "image/jpeg", data: base64Data }
       });
     }
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-lite-latest",
-      contents: [{ parts }],
+      model: "gemini-3-flash-preview",
+      contents,
       config: {
         systemInstruction,
         responseMimeType: "application/json",
-        temperature: 0.8,
+        temperature: 0.7,
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -69,7 +79,7 @@ export const handler = async (event, context) => {
                 type: Type.OBJECT,
                 properties: {
                   id: { type: Type.STRING },
-                  type: { type: Type.STRING },
+                  type: { type: Type.STRING, enum: ["MCQ", "TF", "FITB"] },
                   prompt: { type: Type.STRING },
                   options: { type: Type.ARRAY, items: { type: Type.STRING } },
                   correctAnswer: { type: Type.STRING },
@@ -85,7 +95,9 @@ export const handler = async (event, context) => {
     });
 
     const text = response.text;
-    if (!text) throw new Error("AI returned empty response");
+    if (!text) {
+      throw new Error("AI returned an empty response. This might be due to content safety filters.");
+    }
 
     return {
       statusCode: 200,
@@ -94,14 +106,15 @@ export const handler = async (event, context) => {
     };
 
   } catch (error) {
-    console.error("Netlify Function Error:", error);
+    console.error("Netlify Function Runtime Error:", error);
+    
+    // Return structured error to frontend
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({ 
         error: "SERVER_ERROR", 
-        message: error.message,
-        stack: error.stack 
+        message: error.message || "An unexpected error occurred during question generation."
       })
     };
   }
