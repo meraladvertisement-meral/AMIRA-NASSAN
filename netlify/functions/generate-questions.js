@@ -1,5 +1,4 @@
 
-// Use import for GoogleGenAI and Type as per guidelines
 import { GoogleGenAI, Type } from "@google/genai";
 
 export const handler = async (event, context) => {
@@ -10,59 +9,43 @@ export const handler = async (event, context) => {
     'Content-Type': 'application/json'
   };
 
-  // Preflight-Check for CORS
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
   }
 
   try {
-    // API key must be obtained from process.env.API_KEY
     const apiKey = process.env.API_KEY;
-    if (!apiKey || apiKey === "YOUR_API_KEY_HERE") {
+    if (!apiKey) {
       return { 
         statusCode: 500, 
         headers, 
-        body: JSON.stringify({ error: "CONFIG_ERROR", message: "API_KEY environment variable is missing on Netlify." }) 
+        body: JSON.stringify({ error: "CONFIG_ERROR", message: "API_KEY is missing." }) 
       };
     }
 
-    let body;
-    try {
-      const rawBody = event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString() : event.body;
-      body = JSON.parse(rawBody);
-    } catch (e) {
-      return { 
-        statusCode: 400, 
-        headers, 
-        body: JSON.stringify({ error: "INVALID_REQUEST", message: "Failed to parse request body." }) 
-      };
-    }
-
+    const body = JSON.parse(event.body);
     const { content, settings, isImage, language } = body;
-    // Always use new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
+    const ai = new GoogleGenAI({ apiKey });
     
     const difficultyDesc = settings.difficulty === 'mixed' 
-      ? 'a balanced mix of easy, medium, and hard questions' 
+      ? 'balanced' 
       : settings.difficulty;
 
-    const systemInstruction = `You are an expert educator. Generate a quiz in ${language === 'de' ? 'German' : 'English'}.
-    Return ONLY a JSON object. No markdown, no backticks, just the raw JSON.
-    
-    IMPORTANT CONSTRAINTS:
-    - Count: ${settings.questionCount || 10}
+    const systemInstruction = `You are an expert educator. Create a quiz in ${language === 'ar' ? 'Arabic' : language === 'de' ? 'German' : 'English'}.
+    Return ONLY raw JSON. No markdown.
+    - Question Count: ${settings.questionCount || 10}
     - Difficulty: ${difficultyDesc}
     - Types: ${(settings.types || ['MCQ']).join(", ")}
-    - For MCQ: You MUST provide exactly 4 unique options. DO NOT repeat the same sentence, phrase, or word across different options. Every choice must be distinct.
-    - FITB: prompt must have '_______'. options: 3 unique distractors.
-    - MCQ: options: 4 unique choices.`;
+    - IMPORTANT: Ensure all MCQ options are unique and correct answer is included.`;
 
     const promptText = isImage 
-      ? "Create a quiz based on this image. Ensure all multiple choice options are unique and do not repeat."
-      : `Create a quiz based on the following content. Ensure all multiple choice options are unique and do not repeat: ${content.substring(0, 10000)}`;
+      ? "Generate a quiz from this image. Ensure options are distinct."
+      : `Generate a quiz from this text. Ensure options are distinct: ${content.substring(0, 8000)}`;
 
-    // Correct structure for multi-part content
-    const contents = { parts: [{ text: promptText }] };
+    const contents = { 
+      parts: [{ text: promptText }] 
+    };
 
     if (isImage) {
       const base64Data = content.includes('base64,') ? content.split(',')[1] : content;
@@ -71,9 +54,8 @@ export const handler = async (event, context) => {
       });
     }
 
-    // Always use ai.models.generateContent to query GenAI with both the model name and prompt
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+    const result = await ai.models.generateContent({
+      model: "gemini-2.5-flash-lite-latest",
       contents,
       config: {
         systemInstruction,
@@ -103,28 +85,20 @@ export const handler = async (event, context) => {
       },
     });
 
-    // Access the .text property directly (not a method)
-    let jsonString = response.text || "";
-    
-    // Fallback cleanup if model includes markdown markers
-    if (jsonString.includes("```")) {
-      jsonString = jsonString.replace(/```json/g, "").replace(/```/g, "").trim();
-    }
-
     return {
       statusCode: 200,
       headers,
-      body: jsonString
+      body: result.text
     };
 
   } catch (error) {
-    console.error("Netlify Error:", error);
+    console.error("Function Error:", error);
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({ 
         error: "GENERATION_FAILED", 
-        message: error.message || "Unknown error during AI generation."
+        message: error.message 
       })
     };
   }
