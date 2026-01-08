@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AppScreen, GameMode, QuizSettings, QuizRecord, QuizResult, Question } from './types/quiz';
 import { Language, translations } from './i18n';
@@ -76,20 +75,23 @@ export default function App() {
         setIsAdmin(isUserAdmin);
         localStorage.setItem('sqg_mode', isUserAdmin ? 'admin' : 'user');
         
-        if (!hasJoinCode) setScreen('HOME');
+        if (!hasJoinCode && screen === 'LANDING') setScreen('HOME');
       } else {
         if (hasJoinCode) {
           setScreen('JOIN_ROOM');
         } else if (savedMode === 'guest') {
           handleGuestLogin(false);
-          setScreen('HOME');
+          if (screen === 'LANDING') setScreen('HOME');
         } else if (savedMode === 'admin') {
           setUser({ uid: 'admin-001', displayName: 'System Admin' });
           setIsAdmin(true);
-          setScreen('HOME');
+          if (screen === 'LANDING') setScreen('HOME');
         } else {
           setUser(null);
-          setScreen('LANDING');
+          // Only switch to landing if we are not on a deep-link screen
+          if (screen !== 'JOIN_ROOM' && screen !== 'INFO_CENTER') {
+            setScreen('LANDING');
+          }
         }
       }
       setIsAuthLoading(false);
@@ -298,7 +300,7 @@ export default function App() {
       {screen === 'HISTORY' && <HistoryPage onSelectQuiz={(q) => { setQuiz(q); setScreen('READY'); }} onBack={() => setScreen('HOME')} t={t} />}
       {screen === 'PRICING' && <PricingPage onBack={() => setScreen('HOME')} t={t} />}
       {screen === 'AFFILIATE' && <AffiliatePage onBack={() => setScreen('HOME')} t={t} lang={lang} />}
-      {screen === 'INFO_CENTER' && <InfoCenterPage onBack={() => setScreen('HOME')} lang={lang} />}
+      {screen === 'INFO_CENTER' && <InfoCenterPage onBack={() => user ? setScreen('HOME') : setScreen('LANDING')} lang={lang} />}
     </div>
   );
 }

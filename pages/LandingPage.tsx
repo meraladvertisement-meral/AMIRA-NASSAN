@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { GlassCard } from '../components/layout/GlassCard';
 import { ThreeDButton } from '../components/layout/ThreeDButton';
@@ -22,10 +21,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNext, onGuest, onAdmin, lan
       <div className="absolute bottom-[-10%] right-[-10%] w-64 h-64 bg-brand-gold opacity-10 blur-[100px] rounded-full pointer-events-none"></div>
 
       <div className="absolute top-6 right-6 flex gap-2 z-20">
-        <button 
-          onClick={() => setLang('ar')}
-          className={`px-3 py-1 rounded-full text-sm font-bold transition ${lang === 'ar' ? 'bg-white text-brand-dark shadow-lg' : 'bg-white/20 text-white hover:bg-white/30'}`}
-        >AR</button>
         <button 
           onClick={() => setLang('en')}
           className={`px-3 py-1 rounded-full text-sm font-bold transition ${lang === 'en' ? 'bg-white text-brand-dark shadow-lg' : 'bg-white/20 text-white hover:bg-white/30'}`}
