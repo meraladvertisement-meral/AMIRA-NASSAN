@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { GlassCard } from '../components/layout/GlassCard';
 import { ThreeDButton } from '../components/layout/ThreeDButton';
@@ -15,7 +16,7 @@ interface LandingPageProps {
 
 const LandingPage: React.FC<LandingPageProps> = ({ onNext, onGuest, onAdmin, lang, setLang, t, onOpenLegal }) => {
   return (
-    <div className="flex flex-col items-center justify-center p-6 min-h-screen overflow-hidden relative">
+    <div className="flex flex-col items-center justify-center p-6 min-h-screen overflow-hidden relative pb-24">
       {/* Background Decor */}
       <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-brand-lime opacity-20 blur-[100px] rounded-full pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-64 h-64 bg-brand-gold opacity-10 blur-[100px] rounded-full pointer-events-none"></div>
@@ -62,20 +63,23 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNext, onGuest, onAdmin, lan
         </ThreeDButton>
         
         <div className="flex flex-col items-center gap-4 pt-4">
-          <div className="flex justify-center gap-6 text-white/50 text-[10px] font-bold uppercase tracking-widest">
-            <button onClick={onOpenLegal} className="hover:text-brand-lime transition-colors">{t.terms}</button>
-            <button onClick={onOpenLegal} className="hover:text-brand-lime transition-colors">{t.privacy}</button>
-            <button onClick={onOpenLegal} className="hover:text-brand-lime transition-colors">{t.impressum}</button>
-          </div>
-          
           <button 
             onClick={onAdmin} 
-            className="text-[8px] text-white/10 hover:text-white/30 uppercase tracking-[0.5em] transition-colors mt-2 p-2"
+            className="text-[8px] text-white/10 hover:text-white/30 uppercase tracking-[0.5em] transition-colors p-2"
           >
             Admin Access
           </button>
         </div>
       </GlassCard>
+
+      {/* Fixed Legal Footer */}
+      <footer className="fixed bottom-0 left-0 w-full p-6 bg-brand-dark/20 backdrop-blur-md z-40 border-t border-white/5">
+        <div className="flex justify-center gap-8 text-white/50 text-[10px] font-bold uppercase tracking-[0.2em]">
+          <button onClick={onOpenLegal} className="hover:text-brand-lime transition-colors">{t.terms}</button>
+          <button onClick={onOpenLegal} className="hover:text-brand-lime transition-colors">{t.privacy}</button>
+          <button onClick={onOpenLegal} className="hover:text-brand-lime transition-colors">{t.impressum}</button>
+        </div>
+      </footer>
     </div>
   );
 };
