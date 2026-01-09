@@ -18,10 +18,13 @@ export const handler = async (event) => {
     const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
     
     if (!apiKey) {
-      return { 
-        statusCode: 500, 
-        headers, 
-        body: JSON.stringify({ error: "Missing API Key configuration (GEMINI_API_KEY or API_KEY)" }) 
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({
+          error: "CONFIG_ERROR",
+          message: "Missing GEMINI_API_KEY in Netlify Environment Variables"
+        })
       };
     }
 
@@ -30,7 +33,6 @@ export const handler = async (event) => {
     
     const base64Data = image.includes('base64,') ? image.split(',')[1] : image;
     
-    // Improved prompt for better handwriting recognition and formatting
     const prompt = `Task: Perform high-accuracy Optical Character Recognition (OCR).
     I am providing an image that may contain printed text or handwriting.
     
@@ -62,7 +64,7 @@ export const handler = async (event) => {
 
     const text = response.text;
     if (!text || text.trim().length === 0) {
-      throw new Error("AI could not detect any legible text in this image. Please try a clearer photo.");
+      throw new Error("AI could not detect any legible text in this image.");
     }
 
     return {
@@ -75,7 +77,10 @@ export const handler = async (event) => {
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: error.message || "Failed to process image" })
+      body: JSON.stringify({ 
+        error: "SERVER_ERROR",
+        message: error.message || "Failed to process image" 
+      })
     };
   }
 };

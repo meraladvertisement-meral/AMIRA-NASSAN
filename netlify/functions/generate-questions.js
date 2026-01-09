@@ -15,25 +15,24 @@ export const handler = async (event, context) => {
   }
 
   try {
-    // Priority: GEMINI_API_KEY, Fallback: API_KEY
+    // Priority: GEMINI_API_KEY, Fallback: API_KEY as per Netlify Environment standards
     const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
     
     if (!apiKey) {
-      console.error("CRITICAL: API Key is missing in Netlify environment variables (GEMINI_API_KEY or API_KEY).");
-      return { 
-        statusCode: 500, 
-        headers, 
-        body: JSON.stringify({ 
-          error: "CONFIG_ERROR", 
-          message: "The server is missing the required API key configuration. Please set GEMINI_API_KEY in Netlify settings." 
-        }) 
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({
+          error: "CONFIG_ERROR",
+          message: "Missing GEMINI_API_KEY in Netlify Environment Variables"
+        })
       };
     }
 
     const body = JSON.parse(event.body);
     const { content, settings, isImage, language } = body;
     
-    // Initialize GenAI inside the handler to ensure fresh context/key usage
+    // Initialize GenAI inside the handler
     const ai = new GoogleGenAI({ apiKey });
     
     const difficultyDesc = settings.difficulty === 'mixed' ? 'balanced' : settings.difficulty;
@@ -98,7 +97,7 @@ export const handler = async (event, context) => {
 
     const text = response.text;
     if (!text) {
-      throw new Error("AI returned an empty response. This might be due to content safety filters.");
+      throw new Error("AI returned an empty response.");
     }
 
     return {
@@ -109,8 +108,6 @@ export const handler = async (event, context) => {
 
   } catch (error) {
     console.error("Netlify Function Runtime Error:", error);
-    
-    // Return structured error to frontend
     return {
       statusCode: 500,
       headers,
