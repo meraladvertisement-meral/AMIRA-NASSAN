@@ -87,6 +87,16 @@ const HomePage: React.FC<HomePageProps> = ({
       </header>
 
       <main className="p-6 max-w-lg mx-auto w-full flex-1 flex flex-col justify-center gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        {/* Welcome Banner */}
+        <div className="text-center mb-2">
+          <h2 className="text-3xl font-black text-white italic tracking-tight">
+            {t.appName === 'SnapQuizGame' ? 'Ready to Snap?' : 'جاهز للتحدي؟'}
+          </h2>
+          <p className="text-white/40 text-[10px] font-bold uppercase tracking-[0.3em]">
+            Select a mode to get started
+          </p>
+        </div>
+
         <GlassCard className="space-y-4 shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-white/20">
           <ThreeDButton 
             variant="primary" 
