@@ -141,7 +141,20 @@ export default function App() {
     try {
       await signInWithPopup(auth, googleProvider);
     } catch (e: any) {
-      console.error(e);
+      console.error("Login Error:", e);
+      // Handle the unauthorized domain error specifically to guide the developer/user
+      if (e.code === 'auth/unauthorized-domain') {
+        alert(
+          "Firebase Auth Error: This domain is not authorized.\n\n" +
+          "To fix this, please go to the Firebase Console:\n" +
+          "1. Navigate to Authentication > Settings\n" +
+          "2. Go to 'Authorized Domains'\n" +
+          "3. Add your current domain: " + window.location.hostname + "\n\n" +
+          "If you are using a Netlify preview, you must add that specific preview URL as well."
+        );
+      } else {
+        alert("Login failed: " + (e.message || "Unknown error"));
+      }
     }
   };
 
