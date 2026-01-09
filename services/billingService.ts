@@ -1,10 +1,13 @@
-
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { db, auth } from "./firebase";
 import { Entitlement, GuestUsage, PlayPack } from '../types/billing';
 
 const STORAGE_KEY = 'sqg_billing_v2';
 const GUEST_STORAGE_KEY = 'sqg_guest_usage';
 
 export const billingService = {
+  // We can't use await here without making it async, 
+  // so we'll fetch sync from LocalStorage and App.tsx will handle the sync from Firestore.
   getEntitlement(): Entitlement {
     const saved = localStorage.getItem(STORAGE_KEY);
     const today = new Date().setHours(0,0,0,0);
@@ -22,8 +25,7 @@ export const billingService = {
     };
 
     if (!saved) return defaultEnt;
-    let data: Entitlement = JSON.parse(saved);
-
+    let data = JSON.parse(saved);
     if (data.lastDailyReset < today) {
       data.dailyFreeRemaining = 3;
       data.lastDailyReset = today;
@@ -31,43 +33,37 @@ export const billingService = {
     return data;
   },
 
-  // Added save method to persist entitlement state (Fix for PricingPage)
   save(ent: Entitlement) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(ent));
   },
 
-  // Added addPack method to handle Play Pack purchases (Fix for PricingPage)
-  addPack(count: number) {
-    const ent = this.getEntitlement();
-    const newPack: PlayPack = {
-      id: Math.random().toString(36).substr(2, 9),
-      count: count,
-      purchasedAt: Date.now(),
-      expiresAt: Date.now() + (90 * 24 * 60 * 60 * 1000), // 90 days expiry
-      used: 0
-    };
-    ent.packs.push(newPack);
-    this.save(ent);
-  },
-
-  // Added addBonusPlays method for referral rewards (Fix for affiliateService)
+  // Add bonus plays to the user's current entitlement and save locally
   addBonusPlays(count: number) {
     const ent = this.getEntitlement();
     ent.bonusPlays += count;
     this.save(ent);
   },
 
-  // نظام تتبع الضيوف غير المسجلين
+  // This will be called by App.tsx whenever Firebase Auth or User Doc changes
+  syncFromFirestore(userData: any) {
+    if (!userData) return;
+    const current = this.getEntitlement();
+    const synced: Entitlement = {
+      ...current,
+      planId: userData.subscription?.plan || 'free',
+      cycle: userData.subscription?.period || 'monthly',
+      bonusPlays: userData.soloPlaysBalance || 0,
+      // Map other fields as needed
+    };
+    this.save(synced);
+  },
+
   getGuestUsage(): GuestUsage {
     const today = new Date().setHours(0,0,0,0);
     const saved = localStorage.getItem(GUEST_STORAGE_KEY);
-    
     if (!saved) return { dailyPlaysUsed: 0, lastResetTimestamp: today };
-    
-    let usage: GuestUsage = JSON.parse(saved);
-    if (usage.lastResetTimestamp < today) {
-      return { dailyPlaysUsed: 0, lastResetTimestamp: today };
-    }
+    let usage = JSON.parse(saved);
+    if (usage.lastResetTimestamp < today) return { dailyPlaysUsed: 0, lastResetTimestamp: today };
     return usage;
   },
 
@@ -84,7 +80,6 @@ export const billingService = {
 
   consumePlay(isAdmin: boolean = false): boolean {
     if (isAdmin) return true;
-
     const ent = this.getEntitlement();
     if (ent.planId === 'unlimited') return true;
 
@@ -99,10 +94,7 @@ export const billingService = {
       consumed = this.checkSubscriptionQuota(ent);
     }
 
-    if (consumed) {
-      // Updated to use the new save method for consistency
-      this.save(ent);
-    }
+    if (consumed) this.save(ent);
     return consumed;
   },
 

@@ -13,6 +13,7 @@ interface HomePageProps {
   onInfoCenter: (section: string) => void;
   onLogout: () => void;
   onQuickSnap: () => void;
+  onOpenAdminAffiliates?: () => void;
   t: any;
   audio: any;
   isGuest: boolean;
@@ -29,6 +30,7 @@ const HomePage: React.FC<HomePageProps> = ({
   onInfoCenter, 
   onLogout,
   onQuickSnap,
+  onOpenAdminAffiliates,
   t, 
   audio, 
   isGuest, 
@@ -50,6 +52,16 @@ const HomePage: React.FC<HomePageProps> = ({
         </div>
         
         <div className="flex items-center gap-3">
+          {isAdmin && (
+            <button 
+              onClick={onOpenAdminAffiliates}
+              className="w-10 h-10 flex items-center justify-center rounded-xl bg-brand-gold/20 text-brand-gold border border-brand-gold/30 shadow-lg active:scale-90 transition-all"
+              title="Admin Affiliates"
+            >
+              👑
+            </button>
+          )}
+          
           <button 
             onClick={() => { 
               audio.enableAudio();
@@ -125,7 +137,6 @@ const HomePage: React.FC<HomePageProps> = ({
         </div>
       </main>
 
-      {/* Fixed Legal Footer */}
       <footer className="fixed bottom-0 left-0 w-full p-6 bg-brand-dark/20 backdrop-blur-xl z-40 border-t border-white/5">
         <div className="flex justify-center gap-4 md:gap-8 text-white/50 text-[10px] font-bold uppercase tracking-[0.2em] flex-wrap text-center">
           <button onClick={() => onInfoCenter('terms')} className="hover:text-brand-lime transition-colors">{t.terms}</button>

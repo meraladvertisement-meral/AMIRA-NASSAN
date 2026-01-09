@@ -1,3 +1,4 @@
+
 import { Language } from '../i18n';
 
 export type LegalDocType = 'terms' | 'privacy' | 'impressum' | 'contact' | 'affiliate';
@@ -33,7 +34,7 @@ export const legalService = {
           <p class="mb-4"><strong>Account Data:</strong> We store your name and email provided via Google Sign-In to manage your subscription and history.<br>
           <strong>Content Data:</strong> Text/PDFs uploaded for quiz generation are processed via Google Gemini API. We do not store this raw content permanently after the quiz is generated.</p>
           
-          <h3 class="font-bold text-brand-lime">3. Your Rights</h3>
+          <h3 class="font-bold text-brand-lime">3. Your Your Rights</h3>
           <p class="mb-4">You have the right to access, correct, or delete your personal data at any time. Contact us at info@snapquizgame.app for data requests.</p>
         `,
         impressum: `
@@ -79,16 +80,16 @@ export const legalService = {
           </div>
         `,
         affiliate: `
-          <h2 class="text-xl font-bold mb-4">Affiliate & Referral Policy</h2>
-          <h3 class="font-bold text-brand-lime">A) Referral Rewards</h3>
-          <p class="mb-4">1) <strong>Activation:</strong> A referral is activated when a friend joins via your link, signs in with Google, and completes their first quiz.<br>
-          2) <strong>Reward:</strong> You receive +2 Bonus Plays for every activated referral.<br>
-          3) <strong>Daily Cap:</strong> Rewards are capped at 5 activations per day. Additional activations are rolled over to the next day automatically.</p>
+          <h2 class="text-xl font-bold mb-4 italic">Affiliate & Referral Policy</h2>
+          <h3 class="font-bold text-brand-lime uppercase text-[10px] tracking-widest mb-2">A) Free Referral Plays</h3>
+          <p class="mb-4">1) <strong>Reward:</strong> You receive +2 Bonus Plays for every friend who joins via your link and completes a quiz.<br>
+          2) <strong>Abuse:</strong> We monitor for multi-account abuse. Bonus plays may be revoked if fraud is detected.</p>
           
-          <h3 class="font-bold text-brand-lime">B) Paid Affiliate Commission</h3>
-          <p class="mb-4">1) <strong>Commission:</strong> Earn a fixed $3 commission for every new paid subscription referred through your link.<br>
-          2) <strong>Approval:</strong> Commissions are approved after a 30-day window, provided the subscription is not cancelled or refunded.<br>
-          3) <strong>Payout:</strong> Minimum payout is $20. Contact support for payment arrangements.</p>
+          <h3 class="font-bold text-brand-lime uppercase text-[10px] tracking-widest mb-2">B) Paid Affiliate Commissions</h3>
+          <p class="mb-4">1) <strong>Commission:</strong> Earn a fixed €3.00 for every new paid subscription referred.<br>
+          2) <strong>Review (Anti-Fraud):</strong> Commissions are reviewed manually. Earnings appear as "Pending" first and become "Available" only after manual verification to prevent fraud.<br>
+          3) <strong>Exclusions:</strong> No commission is paid on one-time Play Packs purchases.<br>
+          4) <strong>Payout:</strong> Minimum payout threshold is €20.00. Contact us at info@snapquizgame.app for payment setup.</p>
         `
       },
       de: {
@@ -97,26 +98,11 @@ export const legalService = {
           <p class="mb-4">Willkommen bei SnapQuizGame. Durch die Nutzung unseres Dienstes erklären Sie sich mit diesen Bedingungen einverstanden.</p>
           
           <h3 class="font-bold text-brand-lime">1. Abonnement & Kündigung</h3>
-          <p class="mb-4">Unsere Pläne "Plus" und "Unlimited" sind abonnementbasiert. Sie können <strong>jederzeit kündigen</strong> über Ihre Kontoeinstellungen oder per E-Mail an den Support. Nach der Kündigung bleibt Ihr Zugang bis zum Ende des aktuellen Abrechnungszeitraums aktiv.</p>
-          
-          <h3 class="font-bold text-brand-lime">2. KI-Inhaltserstellung</h3>
-          <p class="mb-4">SnapQuizGame nutzt Google Gemini KI, um Ihre Materialien in Quizze zu verwandeln. Wir bemühen uns um Genauigkeit, jedoch werden Bildungsinhalte automatisch generiert und sollten überprüft werden.</p>
-          
-          <h3 class="font-bold text-brand-lime">3. Play Packs</h3>
-          <p class="mb-4">Play Packs are Einmalkäufe. Sie laufen nicht ab, sind jedoch nicht erstattungsfähig, sobald ein Teil des Guthabens verbraucht wurde.</p>
+          <p class="mb-4">Unsere Pläne "Plus" und "Unlimited" sind abonnementbasiert. Sie können <strong>jederzeit kündigen</strong> über Ihre Kontoeinstellungen oder per E-Mail an den Support.</p>
         `,
         privacy: `
           <h2 class="text-xl font-bold mb-4">Datenschutzerklärung</h2>
           <p class="mb-4">Diese Richtlinie erläutert, wie wir Ihre personenbezogenen Daten gemäß der DSGVO erheben, verwenden und schützen.</p>
-          
-          <h3 class="font-bold text-brand-lime">1. Verantwortliche Stelle</h3>
-          <p class="mb-4">Verantwortlich für die Datenverarbeitung ist Frau Nassan, Kippenbergstraße 26, 04317 Leipzig, Deutschland.</p>
-          
-          <h3 class="font-bold text-brand-lime">2. Erhobene Daten</h3>
-          <p class="mb-4">Wir speichern Ihren Namen und Ihre E-Mail-Adresse (via Google Login), um Ihr Konto und Ihre Abonnements zu verwalten.</p>
-          
-          <h3 class="font-bold text-brand-lime">3. Ihre Rechte</h3>
-          <p class="mb-4">Sie haben das Recht auf Auskunft, Berichtigung oder Löschung Ihrer Daten. Kontaktieren Sie uns unter info@snapquizgame.app.</p>
         `,
         impressum: `
           <h2 class="text-xl font-bold mb-4">Impressum</h2>
@@ -129,48 +115,21 @@ export const legalService = {
               <p class="font-bold uppercase text-brand-lime text-[10px] tracking-widest">Adresse</p>
               <p>Kippenbergstraße 26<br>04317 Leipzig<br>Deutschland</p>
             </div>
-            <div>
-              <p class="font-bold uppercase text-brand-lime text-[10px] tracking-widest">Kontakt</p>
-              <p>E-Mail: <span class="text-white underline">info@snapquizgame.app</span></p>
-            </div>
-            <div>
-              <p class="font-bold uppercase text-brand-lime text-[10px] tracking-widest">Unternehmensform</p>
-              <p>Einzelunternehmerin (Gewerbe)</p>
-            </div>
-            <div>
-              <p class="font-bold uppercase text-brand-lime text-[10px] tracking-widest">Wirtschafts-Identifikationsnummer (W-IdNr)</p>
-              <p>DE453051120</p>
-            </div>
-            <div>
-              <p class="font-bold uppercase text-brand-lime text-[10px] tracking-widest">Registernummer</p>
-              <p>14713000</p>
-            </div>
-            <div>
-              <p class="font-bold uppercase text-brand-lime text-[10px] tracking-widest">Verantwortlich für den Inhalt gemäß § 18 Abs. 2 MStV</p>
-              <p>Frau Nassan</p>
-            </div>
           </div>
         `,
         contact: `
           <h2 class="text-xl font-bold mb-4">Kontakt & Support</h2>
           <p>Wir helfen Ihnen gerne bei Fragen oder technischen Problemen weiter.</p>
-          <div class="mt-6 p-6 glass rounded-2xl border-brand-lime/20">
-            <p class="text-brand-lime font-bold mb-2">Frau Nassan</p>
-            <p class="text-white/80">Kippenbergstraße 26<br>04317 Leipzig</p>
-            <p class="mt-4 font-mono text-sm">E-Mail: info@snapquizgame.app</p>
-          </div>
         `,
         affiliate: `
-          <h2 class="text-xl font-bold mb-4">Partnerprogramm & Empfehlungsrichtlinien</h2>
-          <h3 class="font-bold text-brand-lime">A) Empfehlungs-Belohnungen</h3>
-          <p class="mb-4">1) <strong>Aktivierung:</strong> Eine Empfehlung wird aktiviert, wenn ein Freund über Ihren Link beitritt, sich mit Google anmeldet und sein erstes Quiz abschließt.<br>
-          2) <strong>Belohnung:</strong> Sie erhalten +2 Bonus-Spiele für jede aktivierte Empfehlung.<br>
-          3) <strong>Tageslimit:</strong> Belohnungen sind auf 5 Aktivierungen pro Tag begrenzt. Weitere Aktivierungen werden automatisch auf den nächsten Tag übertragen.</p>
+          <h2 class="text-xl font-bold mb-4 italic">Partnerprogramm & Empfehlungsrichtlinien</h2>
+          <h3 class="font-bold text-brand-lime uppercase text-[10px] tracking-widest mb-2">A) Gratis-Spiele</h3>
+          <p class="mb-4">Sie erhalten +2 Bonus-Spiele für jeden Freund, الذي tritt über Ihren Link bei und schließt ein Quiz ab.</p>
           
-          <h3 class="font-bold text-brand-lime">B) Bezahlte Partner-Provision</h3>
-          <p class="mb-4">1) <strong>Provision:</strong> Verdienen Sie eine feste Provision von $3 für jedes neue kostenpflichtige Abonnement, das über Ihren Link vermittelt wurde.<br>
-          2) <strong>Freigabe:</strong> Provisionen werden nach einer 30-tägigen Frist freigegeben, sofern das Abonnement nicht gekündigt oder erstattet wurde.<br>
-          3) <strong>Auszahlung:</strong> Die Mindestauszahlung beträgt $20. Kontaktieren Sie den Support für Auszahlungsmodalitäten.</p>
+          <h3 class="font-bold text-brand-lime uppercase text-[10px] tracking-widest mb-2">B) Bezahlte Partner-Provision</h3>
+          <p class="mb-4">1) <strong>Provision:</strong> €3.00 für jedes neue kostenpflichtige Abonnement.<br>
+          2) <strong>Prüfung:</strong> Provisionen werden manuell geprüft (Anti-Betrug). Sie erscheinen erst als "Ausstehend" und werden nach Freigabe "Verfügbar".<br>
+          3) <strong>Auszahlung:</strong> Mindestbetrag €20.00.</p>
         `
       }
     };

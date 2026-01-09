@@ -5,12 +5,17 @@ import { Language, translations } from './i18n';
 import { useAudio } from './hooks/useAudio';
 import { GeminiService } from './services/geminiService';
 import { roomService } from './services/roomService';
-import { auth, googleProvider } from './services/firebase';
+import { billingService } from './services/billingService';
+import { auth, googleProvider, db } from './services/firebase';
 import { 
   onAuthStateChanged, 
   signInWithPopup, 
   signOut 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { 
+  doc, 
+  onSnapshot 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // Pages
 import LandingPage from './pages/LandingPage';
@@ -28,6 +33,8 @@ import InfoCenterPage from './info_center/InfoCenterPage';
 import JoinRoomPage from './pages/JoinRoomPage';
 import RoomLobbyPage from './pages/RoomLobbyPage';
 import LeaderboardPage from './pages/LeaderboardPage';
+import PaymentSuccessPage from './pages/PaymentSuccessPage';
+import AdminAffiliatesPage from './pages/AdminAffiliatesPage';
 
 export default function App() {
   const [screen, setScreen] = useState<AppScreen>('LANDING');
@@ -60,19 +67,36 @@ export default function App() {
     localStorage.setItem('sqg_ui_lang', l);
   };
 
-  const checkJoinParams = () => {
+  const checkURLParams = () => {
     const params = new URLSearchParams(window.location.search);
+    
+    // 1. Capture Referral ID
+    const ref = params.get('ref');
+    if (ref) {
+      localStorage.setItem('sqg_referrer_uid', ref);
+    }
+
+    // 2. Check for room join
     const joinCode = params.get('join');
     if (joinCode && joinCode.length === 6) {
       setScreen('JOIN_ROOM');
       return true;
     }
+
+    // 3. Check for payment success
+    const payment = params.get('session_id');
+    if (payment) {
+      setScreen('PAYMENT_SUCCESS');
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return true;
+    }
+
     return false;
   };
 
   useEffect(() => {
     const savedMode = localStorage.getItem('sqg_mode');
-    const hasJoinCode = checkJoinParams();
+    const hasParams = checkURLParams();
 
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       if (u) {
@@ -82,10 +106,17 @@ export default function App() {
         setIsAdmin(isUserAdmin);
         localStorage.setItem('sqg_mode', isUserAdmin ? 'admin' : 'user');
         
-        if (!hasJoinCode && screen === 'LANDING') setScreen('HOME');
+        const unsubEntitlements = onSnapshot(doc(db, "users", u.uid), (snap) => {
+          if (snap.exists()) {
+            billingService.syncFromFirestore(snap.data());
+          }
+        });
+
+        if (!hasParams && screen === 'LANDING') setScreen('HOME');
+        
+        return () => unsubEntitlements();
       } else {
-        if (hasJoinCode) {
-          setScreen('JOIN_ROOM');
+        if (hasParams) {
         } else if (savedMode === 'guest') {
           handleGuestLogin(false);
           if (screen === 'LANDING') setScreen('HOME');
@@ -95,7 +126,7 @@ export default function App() {
           if (screen === 'LANDING') setScreen('HOME');
         } else {
           setUser(null);
-          if (screen !== 'JOIN_ROOM' && screen !== 'INFO_CENTER') {
+          if (screen !== 'JOIN_ROOM' && screen !== 'INFO_CENTER' && screen !== 'PAYMENT_SUCCESS') {
             setScreen('LANDING');
           }
         }
@@ -121,7 +152,7 @@ export default function App() {
     const guestUid = localStorage.getItem('sqg_guest_uid') || 'guest-' + Math.random().toString(36).substr(2, 5);
     localStorage.setItem('sqg_guest_uid', guestUid);
     setUser({ uid: guestUid, displayName: 'Guest Player' });
-    if (redirect && !checkJoinParams()) setScreen('HOME');
+    if (redirect && !checkURLParams()) setScreen('HOME');
   };
 
   const handleAdminLogin = () => {
@@ -150,6 +181,12 @@ export default function App() {
   };
 
   const handleStartQuiz = async (content: string, isImage: boolean = false) => {
+    if (!billingService.consumePlay(isAdmin)) {
+      setInfoSection('plans');
+      setScreen('PRICING');
+      return;
+    }
+
     setScreen('LOADING');
     setLoadingError(null);
     setLastQuizContent({ content, isImage });
@@ -208,6 +245,12 @@ export default function App() {
   };
 
   const handleStartManual = async (questions: Question[]) => {
+    if (!billingService.consumePlay(isAdmin)) {
+      setInfoSection('plans');
+      setScreen('PRICING');
+      return;
+    }
+
     const newQuiz: QuizRecord = {
       id: Math.random().toString(36).substr(2, 9),
       createdAt: Date.now(),
@@ -236,7 +279,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen pt-12">
-      {/* Global Language Bar */}
       <div className="fixed top-0 left-0 w-full z-[100] h-12 bg-black/20 backdrop-blur-md flex justify-center items-center gap-2 border-b border-white/5">
         <button 
           onClick={() => changeLanguage('en')}
@@ -253,7 +295,7 @@ export default function App() {
       )}
       
       {user && screen === 'HOME' && (
-        <HomePage onSelectMode={(m) => { setMode(m); setScreen('CONFIG'); }} onJoinDuel={() => setScreen('JOIN_ROOM')} onHistory={() => setScreen('HISTORY')} onPricing={() => setScreen('PRICING')} onAffiliate={() => setScreen('AFFILIATE')} onInfoCenter={openInfoCenter} onLogout={handleLogout} onQuickSnap={() => {}} t={t} audio={audio} isGuest={isGuest} demoUsed={false} isAdmin={isAdmin} />
+        <HomePage onSelectMode={(m) => { setMode(m); setScreen('CONFIG'); }} onJoinDuel={() => setScreen('JOIN_ROOM')} onHistory={() => setScreen('HISTORY')} onPricing={() => setScreen('PRICING')} onAffiliate={() => setScreen('AFFILIATE')} onInfoCenter={openInfoCenter} onLogout={handleLogout} onQuickSnap={() => {}} t={t} audio={audio} isGuest={isGuest} demoUsed={false} isAdmin={isAdmin} onOpenAdminAffiliates={() => setScreen('ADMIN_AFFILIATES')} />
       )}
 
       {screen === 'CONFIG' && <ConfigPage settings={settings} setSettings={setSettings} onStart={handleStartQuiz} onStartManual={handleStartManual} onBack={() => setScreen('HOME')} t={t} />}
@@ -324,6 +366,8 @@ export default function App() {
       {screen === 'PRICING' && <PricingPage onBack={() => setScreen('HOME')} t={t} />}
       {screen === 'AFFILIATE' && <AffiliatePage onBack={() => setScreen('HOME')} t={t} lang={lang} />}
       {screen === 'INFO_CENTER' && <InfoCenterPage onBack={() => user ? setScreen('HOME') : setScreen('LANDING')} lang={lang} defaultSection={infoSection} />}
+      {screen === 'PAYMENT_SUCCESS' && <PaymentSuccessPage t={t} audio={audio} onContinue={() => setScreen(user ? 'HOME' : 'LANDING')} />}
+      {screen === 'ADMIN_AFFILIATES' && <AdminAffiliatesPage onBack={() => setScreen('HOME')} t={t} />}
     </div>
   );
 }

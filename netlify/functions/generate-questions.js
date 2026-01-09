@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 
 export const handler = async (event, context) => {
@@ -14,16 +15,17 @@ export const handler = async (event, context) => {
   }
 
   try {
-    // Exclusively use process.env.API_KEY as per system instructions
-    const apiKey = process.env.API_KEY;
+    // Priority: GEMINI_API_KEY, Fallback: API_KEY
+    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+    
     if (!apiKey) {
-      console.error("CRITICAL: API_KEY is missing in Netlify environment variables.");
+      console.error("CRITICAL: API Key is missing in Netlify environment variables (GEMINI_API_KEY or API_KEY).");
       return { 
         statusCode: 500, 
         headers, 
         body: JSON.stringify({ 
           error: "CONFIG_ERROR", 
-          message: "The server is missing the required API key configuration. Please set API_KEY in Netlify settings." 
+          message: "The server is missing the required API key configuration. Please set GEMINI_API_KEY in Netlify settings." 
         }) 
       };
     }

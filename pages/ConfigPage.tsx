@@ -37,6 +37,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
   const [fileName, setFileName] = useState('');
   const [processing, setProcessing] = useState(false);
   const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrSuccess, setOcrSuccess] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -62,6 +63,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
 
     setFileName(file.name);
     setProcessing(true);
+    setOcrSuccess(false);
 
     const reader = new FileReader();
     reader.onload = async (event) => {
@@ -70,6 +72,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
         setContent(result);
         setProcessing(false);
       } else {
+        // Simple PDF text extraction if available
         setContent("Processing PDF content from: " + file.name);
         setActiveTab('text');
         setProcessing(false);
@@ -86,12 +89,17 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
   const handleExtractText = async () => {
     if (!content.startsWith('data:image')) return;
     setOcrLoading(true);
+    setOcrSuccess(false);
     try {
       const extracted = await GeminiService.getInstance().ocr(content);
       setContent(extracted);
-      setActiveTab('text');
-    } catch (err) {
-      alert("Failed to extract text. Please try again.");
+      setOcrSuccess(true);
+      // Automatically switch to text tab after a brief delay so user sees success and has time to read it
+      setTimeout(() => {
+        setActiveTab('text');
+      }, 2500);
+    } catch (err: any) {
+      alert(t.ocrError || "Failed to extract text. Please ensure the image is clear.");
     } finally {
       setOcrLoading(false);
     }
@@ -196,12 +204,6 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
             className="w-full bg-white/5 rounded-xl px-4 py-3 text-sm focus:outline-none border-2 border-transparent focus:border-brand-lime/30 transition-all font-bold"
             placeholder="Enter title for your PDF or Quiz..."
           />
-          <p className="text-[10px] text-white/40 mt-2 px-1 leading-relaxed">
-            {t.appName === 'SnapQuizGame' 
-              ? "You can save the text as is before generating questions as an additional file if you wish."
-              : "يمكنك حفظ النص كما هو قبل تكوين الاسئلة كملف اضافي اذا رغبت"
-            }
-          </p>
         </div>
 
         <div className="flex gap-2">
@@ -253,14 +255,34 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
             </div>
             
             {activeTab === 'image' && content.startsWith('data:image') && (
-              <ThreeDButton 
-                variant="secondary" 
-                className="w-full py-3 text-[10px]" 
-                onClick={handleExtractText}
-                disabled={ocrLoading}
-              >
-                {ocrLoading ? "Extracting Text... 🧠" : "Extract Text & Edit 📝"}
-              </ThreeDButton>
+              <div className="space-y-3">
+                {ocrLoading && (
+                  <div className="p-4 bg-brand-lime/10 border border-brand-lime/20 rounded-xl flex items-center gap-3 animate-pulse">
+                    <span className="animate-spin text-brand-lime">⌛</span>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-bold text-brand-lime uppercase tracking-widest">{t.ocrProcessing || "AI is analyzing image..."}</span>
+                      <span className="text-[8px] font-medium text-white/40 uppercase tracking-tighter">Recognizing handwriting & structures...</span>
+                    </div>
+                  </div>
+                )}
+                {ocrSuccess && (
+                  <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+                    <span className="text-green-500">✅</span>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-bold text-green-500 uppercase tracking-widest">{t.ocrSuccess || "Extracted Successfully!"}</span>
+                      <span className="text-[8px] font-medium text-white/40 uppercase tracking-tighter">Heading to Text tab...</span>
+                    </div>
+                  </div>
+                )}
+                <ThreeDButton 
+                  variant="secondary" 
+                  className="w-full py-4 text-sm" 
+                  onClick={handleExtractText}
+                  disabled={ocrLoading}
+                >
+                  {ocrLoading ? t.extractingText : t.takePhoto}
+                </ThreeDButton>
+              </div>
             )}
           </div>
         )}
@@ -310,7 +332,7 @@ const ConfigPage: React.FC<ConfigPageProps> = ({
         </div>
       </GlassCard>
 
-      <ThreeDButton variant="primary" className="w-full py-5 text-xl" disabled={!content && activeTab === 'text'} onClick={() => onStart(content, activeTab === 'image')}>
+      <ThreeDButton variant="primary" className="w-full py-5 text-xl" disabled={(!content && activeTab === 'text') || ocrLoading} onClick={() => onStart(content, activeTab === 'image')}>
         {t.startAi}
       </ThreeDButton>
 

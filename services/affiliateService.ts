@@ -1,16 +1,38 @@
 
+import { collection, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { db, auth } from './firebase';
 import { billingService } from './billingService';
 
 interface AffiliateData {
-  activations: string[]; // List of referred user IDs
+  activations: string[];
   pendingBonusCount: number;
   lastBonusReset: number;
-  commissions: { id: string; amount: number; status: 'pending' | 'approved' | 'rejected'; createdAt: number }[];
+  commissions: { id: string; amount: number; state: 'pending' | 'approved' | 'rejected'; createdAt: number }[];
 }
 
 const STORAGE_KEY = 'sqg_affiliate';
 
 export const affiliateService = {
+  // Sync totals from Firestore for the specific user
+  async getLiveTotals(): Promise<{ pending: number, available: number }> {
+    const user = auth.currentUser;
+    if (!user) return { pending: 0, available: 0 };
+
+    const q = query(collection(db, "affiliate_commissions"), where("referrerUid", "==", user.uid));
+    const snap = await getDocs(q);
+    
+    let pending = 0;
+    let available = 0;
+
+    snap.forEach(doc => {
+      const data = doc.data();
+      if (data.state === 'pending') pending += (data.amount || 0);
+      if (data.state === 'approved') available += (data.amount || 0);
+    });
+
+    return { pending, available };
+  },
+
   getData(): AffiliateData {
     const raw = localStorage.getItem(STORAGE_KEY);
     const defaultData: AffiliateData = {
@@ -20,52 +42,15 @@ export const affiliateService = {
       commissions: []
     };
     if (!raw) return defaultData;
-    
     let data = JSON.parse(raw);
-    
-    // Process Rollover: If a new day has started, move up to 5 from pending to bonus plays
-    const today = new Date().setHours(0,0,0,0);
-    if (data.lastBonusReset < today) {
-      const daysPassed = Math.floor((today - data.lastBonusReset) / (24 * 60 * 60 * 1000));
-      for (let i = 0; i < daysPassed; i++) {
-        const toApply = Math.min(data.pendingBonusCount, 5);
-        if (toApply > 0) {
-          billingService.addBonusPlays(toApply * 2);
-          data.pendingBonusCount -= toApply;
-        }
-      }
-      data.lastBonusReset = today;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    }
-    
     return data;
   },
 
   registerActivation(referredUserId: string) {
     const data = this.getData();
     if (data.activations.includes(referredUserId)) return;
-
     data.activations.push(referredUserId);
-    
-    // Check daily cap (5 activations per day)
-    const todayCount = 0; // In a real app, this would be tracked per day in Firestore
-    if (todayCount < 5) {
-      billingService.addBonusPlays(2);
-    } else {
-      data.pendingBonusCount += 1; // Rollover for tomorrow
-    }
-    
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  },
-
-  addCommission(amount: number = 3) {
-    const data = this.getData();
-    data.commissions.push({
-      id: Math.random().toString(36).substr(2, 9),
-      amount,
-      status: 'pending',
-      createdAt: Date.now()
-    });
+    billingService.addBonusPlays(2);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }
 };

@@ -1,3 +1,4 @@
+
 export const infoContent = {
   en: {
     plans: {
@@ -18,19 +19,19 @@ export const infoContent = {
           "Unlimited: Unlimited plays (Solo + Duel) — Fair Use",
           "Unlimited: 60 Teacher quizzes / month"
         ],
-        priceMonthly: "Plus: $8.99 / Unlimited: $18.99 (Monthly)",
-        priceYearly: "Plus: $89.90 / Unlimited: $189.90 (Yearly)"
+        priceMonthly: "Plus: €8.99 / Unlimited: €17.99 (Monthly)",
+        priceYearly: "Plus: €82.99 / Unlimited: €174.99 (Yearly)"
       }
     },
     affiliate: {
       title: "Affiliate Policy",
       items: [
         "Each user has a unique referral link",
-        "Fixed commission: $3 per successful paid subscription",
+        "Fixed commission: €3 per successful paid subscription",
         "Commission states: Pending right after payment, Available after 30 days with no cancellation/refund",
         "No subscription type (monthly/yearly) shown in dashboard",
         "No commission for buying play credits (Play Packs)",
-        "Minimum payout: $20"
+        "Minimum payout: €20"
       ]
     },
     terms: {
@@ -95,26 +96,26 @@ export const infoContent = {
           "Unlimited: Unbegrenzte Spiele (Solo + Duell) — Fair Use",
           "Unlimited: 60 Lehrer-Quizzes / Monat"
         ],
-        priceMonthly: "Plus: $8.99 / Unlimited: $18.99 (شهري / Monthly)",
-        priceYearly: "Plus: $89.90 / Unlimited: $189.90 (سنوي / Yearly)"
+        priceMonthly: "Plus: €8.99 / Unlimited: €17.99 (Monatlich / Monthly)",
+        priceYearly: "Plus: €82.99 / Unlimited: €174.99 (Jährlich / Yearly)"
       }
     },
     affiliate: {
       title: "Affiliate-Richtlinie",
       items: [
         "Jeder Nutzer hat einen einzigartigen Empfehlungslink",
-        "Feste Provision: $3 pro erfolgreichem kostenpflichtigem Abonnement",
+        "Feste Provision: €3 pro erfolgreichem kostenpflichtigem Abonnement",
         "Provisionsstatus: Ausstehend direkt nach der Zahlung, Verfügbar nach 30 Tagen ohne Stornierung/Rückerstattung",
         "Keine Anzeige des Abonnementtyps (monatlich/jährlich) im Dashboard",
         "Keine Provision für den Kauf von Spielguthaben (Play Packs)",
-        "Mindestauszahlung: $20"
+        "Mindestauszahlung: €20"
       ]
     },
     terms: {
       title: "Nutzungsbedingungen",
       items: [
         "SnapQuizGame ist eine interaktive Lern-App",
-        "Geeignet für Familien und Kinder unter elterlicher Aufsicht",
+        "Geeignet für Familien und Kindern unter elterlicher Aufsicht",
         "Nur Google-Login",
         "Betrug oder Missbrauch ist untersagt",
         "KI-generierte Inhalte können Fehler enthalten",

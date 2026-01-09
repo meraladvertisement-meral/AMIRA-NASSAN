@@ -63,6 +63,7 @@ export const translations = {
     subscriptions: "Subscriptions",
     monthly: "Monthly",
     yearly: "Yearly",
+    threeMonthsFree: "3 Months Free",
     bestSeller: "Best Seller",
     prepaidPacks: "Prepaid Play Packs",
     packRules: "Pack Rules & Info",
@@ -80,7 +81,16 @@ export const translations = {
     cancelSub: "Cancel",
     subscribe: "Subscribe",
     plusFeatures: ["200 plays / month", "20 Teacher quizzes / month", "Priority AI Generation"],
-    unlimitedFeatures: ["Unlimited plays (Fair Use)", "60 Teacher quizzes / month", "Custom PDF Branding"]
+    unlimitedFeatures: ["Unlimited plays (Fair Use)", "60 Teacher quizzes / month"],
+    paymentSuccess: "Payment Successful!",
+    paymentSuccessDesc: "Your account has been upgraded. Thank you for your support!",
+    goToAccount: "Go to My Account",
+    dailyCreditsInfo: "Daily free credits still apply in addition to your subscription or pack.",
+    ocrProcessing: "AI is analyzing the image and handwriting...",
+    ocrSuccess: "Text extracted successfully! Go to the Text tab to review.",
+    ocrError: "Failed to read image. Make sure it's clear and bright.",
+    extractingText: "Extracting Text...",
+    textReady: "Text Ready!"
   },
   de: {
     mixed: "Gemischt",
@@ -143,6 +153,7 @@ export const translations = {
     subscriptions: "Abonnements",
     monthly: "Monatlich",
     yearly: "Jährlich",
+    threeMonthsFree: "3 Monate gratis",
     bestSeller: "Bestseller",
     prepaidPacks: "Prepaid-Spielpakete",
     packRules: "Paketregeln & Infos",
@@ -160,6 +171,15 @@ export const translations = {
     cancelSub: "Kündigen",
     subscribe: "Abonnieren",
     plusFeatures: ["200 Spiele / Monat", "20 Lehrer-Quizzes / Monat", "Priorisierte KI-Generierung"],
-    unlimitedFeatures: ["Unbegrenzte Spiele (Fair Use)", "60 Lehrer-Quizzes / Monat", "Eigenes PDF-Branding"]
+    unlimitedFeatures: ["Unbegrenzte Spiele (Fair Use)", "60 Lehrer-Quizzes / Monat"],
+    paymentSuccess: "Zahlung erfolgreich!",
+    paymentSuccessDesc: "Dein Konto wurde hochgestuft. Vielen Dank für deine Unterstützung!",
+    goToAccount: "Zum Konto gehen",
+    dailyCreditsInfo: "Tägliche Gratis-Guthaben gelten weiterhin zusätzlich zu Ihrem Abonnement oder Paket.",
+    ocrProcessing: "KI analysiert Bild und Handschrift...",
+    ocrSuccess: "Text erfolgreich extrahiert! Gehen Sie zum Tab 'Text'.",
+    ocrError: "Fehler beim Lesen. Achten Sie auf Helligkeit.",
+    extractingText: "Extrahiere Text...",
+    textReady: "Text bereit!"
   }
 };

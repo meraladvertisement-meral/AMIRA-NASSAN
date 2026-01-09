@@ -1,9 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GlassCard } from '../components/layout/GlassCard';
 import { ThreeDButton } from '../components/layout/ThreeDButton';
 import { Language } from '../i18n';
 import { legalService } from '../services/legalService';
+import { affiliateService } from '../services/affiliateService';
+import { auth } from '../services/firebase';
 
 interface AffiliatePageProps {
   onBack: () => void;
@@ -13,60 +15,85 @@ interface AffiliatePageProps {
 
 const AffiliatePage: React.FC<AffiliatePageProps> = ({ onBack, t, lang }) => {
   const [showPolicy, setShowPolicy] = useState(false);
-  const referralLink = `https://snapquiz.game/?ref=USER123`;
+  const [totals, setTotals] = useState({ pending: 0, available: 0 });
+  const [loading, setLoading] = useState(true);
+  
+  const user = auth.currentUser;
+  const referralLink = `https://snapquizgame.app/?ref=${user?.uid || 'guest'}`;
+
+  useEffect(() => {
+    affiliateService.getLiveTotals().then(data => {
+      setTotals(data);
+      setLoading(false);
+    });
+  }, []);
 
   const copyLink = () => {
     navigator.clipboard.writeText(referralLink);
-    alert(t.copied);
+    alert("Referral link copied! 🚀");
   };
 
   return (
-    <div className="p-6 max-w-lg mx-auto min-h-screen flex flex-col gap-6">
+    <div className="p-6 max-w-lg mx-auto min-h-screen flex flex-col gap-6 custom-scrollbar overflow-y-auto">
       <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-black italic">{t.affiliate}</h2>
+        <h2 className="text-3xl font-black italic tracking-tighter">{t.affiliate}</h2>
         <button onClick={onBack} className="glass px-4 py-2 rounded-xl text-sm font-bold">←</button>
       </div>
 
-      <GlassCard className="text-center">
-        <h3 className="text-xl font-bold mb-2">{t.referralTitle}</h3>
-        <p className="text-white/60 mb-6">{t.referralDesc}</p>
+      <GlassCard className="text-center border-brand-lime/20 relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-2 opacity-10 text-5xl">🤝</div>
+        <h3 className="text-xl font-black mb-2 italic">Earn Rewards!</h3>
+        <p className="text-white/60 text-xs mb-6 font-bold uppercase tracking-widest leading-relaxed">
+          Invite friends & get paid per subscriber
+        </p>
         
-        <div className="bg-white/10 p-4 rounded-2xl mb-4 text-brand-lime font-mono break-all">
-          {referralLink}
+        <div className="bg-black/30 p-4 rounded-2xl mb-4 border border-white/5 flex flex-col gap-2">
+          <p className="text-[9px] font-black text-brand-gold uppercase tracking-[0.3em]">{t.referralTitle || "Your Link"}</p>
+          <div className="text-[10px] font-mono break-all text-white/50">{referralLink}</div>
         </div>
         
-        <ThreeDButton variant="primary" className="w-full" onClick={copyLink}>
-          {t.copyLink}
+        <ThreeDButton variant="primary" className="w-full text-sm" onClick={copyLink}>
+          Copy Invite Link 📋
         </ThreeDButton>
       </GlassCard>
 
       <div className="grid grid-cols-2 gap-4">
-        <GlassCard className="text-center p-4">
-          <p className="text-xs uppercase font-bold text-white/50">{t.activations}</p>
-          <p className="text-2xl font-black">12</p>
+        <GlassCard className="text-center p-6 border-white/5 relative">
+          <p className="text-[9px] uppercase font-black text-white/30 tracking-widest mb-1">Pending</p>
+          <p className="text-2xl font-black text-brand-gold italic">€{loading ? '...' : totals.pending.toFixed(2)}</p>
+          <div className="absolute bottom-1 right-3 text-[8px] text-white/10 font-black italic uppercase">Reviewing</div>
         </GlassCard>
-        <GlassCard className="text-center p-4">
-          <p className="text-xs uppercase font-bold text-white/50">Earnings</p>
-          <p className="text-2xl font-black text-brand-lime">$36.00</p>
+        <GlassCard className="text-center p-6 border-brand-lime/20 relative">
+          <p className="text-[9px] uppercase font-black text-white/30 tracking-widest mb-1">Available</p>
+          <p className="text-2xl font-black text-brand-lime italic">€{loading ? '...' : totals.available.toFixed(2)}</p>
+          <div className="absolute bottom-1 right-3 text-[8px] text-brand-lime/30 font-black italic uppercase">Withdrawal Ready</div>
         </GlassCard>
       </div>
 
+      {totals.available >= 20 && (
+         <GlassCard className="bg-brand-lime/10 border-brand-lime animate-bounce">
+            <p className="text-[10px] font-black text-brand-lime uppercase tracking-widest text-center">
+              🎉 Eligible for Payout! Contact us to withdraw.
+            </p>
+         </GlassCard>
+      )}
+
       <button 
         onClick={() => setShowPolicy(true)}
-        className="text-white/40 text-sm underline text-center"
+        className="text-white/40 text-[10px] font-black uppercase tracking-widest underline text-center pt-4"
       >
         View Affiliate & Referral Policy
       </button>
 
       {showPolicy && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80">
-          <GlassCard className="max-h-[80vh] overflow-y-auto w-full max-w-xl">
-            <div className="flex justify-between items-center mb-4 sticky top-0 bg-transparent backdrop-blur-md pb-2 z-10 border-b border-white/10">
-              <h3 className="text-xl font-bold">{t.affiliate} Policy</h3>
-              <button onClick={() => setShowPolicy(false)} className="p-2">✕</button>
+          <GlassCard className="max-h-[80vh] overflow-y-auto w-full max-w-xl relative">
+            <div className="flex justify-between items-center mb-4 sticky top-0 bg-brand-dark/95 backdrop-blur-md pb-4 z-10 border-b border-white/10">
+              <h3 className="text-xl font-black italic">{t.affiliate} Policy</h3>
+              <button onClick={() => setShowPolicy(false)} className="w-8 h-8 flex items-center justify-center bg-white/10 rounded-full">✕</button>
             </div>
             <div 
-              className="prose prose-invert text-sm text-white/80 mt-4 leading-relaxed"
+              className="prose prose-invert text-xs text-white/80 mt-4 leading-relaxed font-bold"
               dangerouslySetInnerHTML={{ __html: legalService.getContent('affiliate', lang) }}
             />
           </GlassCard>

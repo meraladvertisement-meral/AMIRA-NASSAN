@@ -4,6 +4,7 @@ import { GlassCard } from '../components/layout/GlassCard';
 import { ThreeDButton } from '../components/layout/ThreeDButton';
 import { billingService } from '../services/billingService';
 import { Entitlement } from '../types/billing';
+import { auth } from '../services/firebase';
 
 interface PricingPageProps {
   onBack: () => void;
@@ -12,6 +13,7 @@ interface PricingPageProps {
 
 const PricingPage: React.FC<PricingPageProps> = ({ onBack, t }) => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [loadingPriceId, setLoadingPriceId] = useState<string | null>(null);
   const [entitlement, setEntitlement] = useState<Entitlement>(billingService.getEntitlement());
   
   useEffect(() => {
@@ -23,49 +25,60 @@ const PricingPage: React.FC<PricingPageProps> = ({ onBack, t }) => {
       id: 'plus', 
       name: 'Plus', 
       monthly: 8.99, 
-      yearly: 89.90,
+      yearly: 82.99,
+      monthlyPriceId: 'price_1SnPldGvLCUKCR9vpV4CdIHs',
+      yearlyPriceId: 'price_1SnPtJGvLCUKCR9vJVjo8FB1',
       fullYearlyPrice: 107.88,
       features: t.plusFeatures
     },
     { 
       id: 'unlimited', 
       name: 'Unlimited', 
-      monthly: 18.99, 
-      yearly: 189.90,
-      fullYearlyPrice: 227.88,
+      monthly: 17.99, 
+      yearly: 174.99,
+      monthlyPriceId: 'price_1SnPmqGvLCUKCR9vtyWXSjRz',
+      yearlyPriceId: 'price_1SnPnRGvLCUKCR9vx4AtlCmF',
+      fullYearlyPrice: 215.88,
       features: t.unlimitedFeatures
     },
   ];
 
   const playPacks = [
-    { id: 'starter_pack', name: '🎖 Starter Pack', count: 20, price: 4.49 },
-    { id: 'pro_pack', name: '🥈 Pro Pack', count: 100, price: 13.99 },
-    { id: 'master_pack', name: '🥇 Master Pack', count: 250, price: 27.99, isBestSeller: true }
+    { id: 'starter_pack', name: '🎖 Starter Pack', count: 20, price: 4.13, priceId: 'price_1SnR0TGvLCUKCR9vty6XX32N' },
+    { id: 'pro_pack', name: '🥈 Pro Pack', count: 100, price: 12.87, priceId: 'price_1SnRR8GvLCUKCR9vr0VbBn2T' },
+    { id: 'master_pack', name: '🥇 Master Pack', count: 250, price: 25.75, priceId: 'price_1SnRSiGvLCUKCR9vKxRbuSnk', isBestSeller: true }
   ];
 
-  const handleSubscribe = (planId: string) => {
-    const ent = billingService.getEntitlement();
-    ent.planId = planId as any;
-    ent.subscriptionStartAt = Date.now();
-    ent.cycle = billingCycle;
-    billingService.save(ent);
-    setEntitlement({ ...ent });
-    alert(t.subActivated);
-  };
+  const startCheckout = async (priceId: string) => {
+    if (!auth.currentUser) {
+      alert("Please sign in to make a purchase.");
+      return;
+    }
+    
+    setLoadingPriceId(priceId);
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const referrerUid = localStorage.getItem('sqg_referrer_uid');
 
-  const handleBuyPack = (count: number) => {
-    billingService.addPack(count);
-    setEntitlement(billingService.getEntitlement());
-    alert(t.playsAdded.replace('{count}', count.toString()));
-  };
-
-  const handleCancel = () => {
-    const ent = billingService.getEntitlement();
-    const confirmCancel = confirm(t.cancelSubConfirm);
-    if (confirmCancel) {
-      ent.planId = 'free'; 
-      billingService.save(ent);
-      setEntitlement({ ...ent });
+      const response = await fetch('/.netlify/functions/create-checkout-session', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ priceId, referrerUid })
+      });
+      
+      const { url, error } = await response.json();
+      if (url) {
+        window.location.href = url;
+      } else {
+        throw new Error(error || "Failed to create checkout session");
+      }
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setLoadingPriceId(null);
     }
   };
 
@@ -79,56 +92,47 @@ const PricingPage: React.FC<PricingPageProps> = ({ onBack, t }) => {
         <button onClick={onBack} className="glass w-12 h-12 flex items-center justify-center rounded-2xl text-xl active:scale-90 transition shadow-lg">←</button>
       </div>
 
-      {/* Subscription Section */}
+      <div className="bg-brand-lime/10 border border-brand-lime/20 rounded-2xl p-4 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-500">
+        <span className="text-xl">💡</span>
+        <p className="text-[11px] font-bold text-white/80 leading-snug">{t.dailyCreditsInfo}</p>
+      </div>
+
       <div className="space-y-4">
         <h3 className="text-sm font-black uppercase text-brand-lime tracking-widest ml-1">{t.subscriptions}</h3>
         <div className="flex bg-white/10 p-1 rounded-2xl border border-white/5">
-          <button 
-            onClick={() => setBillingCycle('monthly')} 
-            className={`flex-1 py-2 rounded-xl font-bold text-xs uppercase transition ${billingCycle === 'monthly' ? 'bg-white text-brand-dark shadow-lg' : 'text-white/40'}`}
-          >{t.monthly}</button>
-          <button 
-            onClick={() => setBillingCycle('yearly')} 
-            className={`flex-1 py-2 rounded-xl font-bold text-xs uppercase transition ${billingCycle === 'yearly' ? 'bg-white text-brand-dark shadow-lg' : 'text-white/40'}`}
-          >{t.yearly} <span className="text-[8px] opacity-70">(-20%)</span></button>
+          <button onClick={() => setBillingCycle('monthly')} className={`flex-1 py-2 rounded-xl font-bold text-xs uppercase transition ${billingCycle === 'monthly' ? 'bg-white text-brand-dark shadow-lg' : 'text-white/40'}`}>{t.monthly}</button>
+          <button onClick={() => setBillingCycle('yearly')} className={`flex-1 py-2 rounded-xl font-bold text-xs uppercase transition ${billingCycle === 'yearly' ? 'bg-white text-brand-dark shadow-lg' : 'text-white/40'}`}>{t.yearly} <span className={`text-[9px] ml-1 ${billingCycle === 'yearly' ? 'text-brand-orange' : 'opacity-70'}`}>({t.threeMonthsFree})</span></button>
         </div>
 
         <div className="grid grid-cols-1 gap-4">
           {subscriptionPlans.map(p => {
             const isActive = entitlement.planId === p.id;
             const currentPrice = billingCycle === 'monthly' ? p.monthly : p.yearly;
+            const priceId = billingCycle === 'monthly' ? p.monthlyPriceId : p.yearlyPriceId;
             const showDiscount = billingCycle === 'yearly';
 
             return (
               <GlassCard key={p.id} className={`relative border-white/10 ${isActive ? 'border-brand-lime border-2' : ''}`}>
                 <h3 className="text-xl font-black mb-2">{p.name}</h3>
-                
                 <div className="relative flex items-center mb-6 pt-4 h-20">
-                  <div className="flex items-baseline">
-                    <p className="text-4xl font-black text-brand-lime leading-none">€{currentPrice}</p>
-                    <span className="text-[10px] text-white/30 ml-1 font-black uppercase tracking-widest">
-                      {billingCycle === 'monthly' ? '/mo' : '/yr'}
-                    </span>
+                  <div className="flex items-baseline z-10">
+                    <p className="text-4xl font-black text-brand-lime leading-none">€{currentPrice.toFixed(2)}</p>
+                    <span className="text-[10px] text-white/30 ml-1 font-black uppercase tracking-widest">{billingCycle === 'monthly' ? '/mo' : '/yr'}</span>
                   </div>
-                  
                   {showDiscount && (
-                    <div className="absolute top-0 right-2 transform -translate-y-1/4 rotate-[15deg] pointer-events-none">
-                      <span className="text-3xl font-black text-red-600 line-through decoration-[3px] drop-shadow-[0_0_10px_rgba(220,38,38,0.4)] italic">
-                        €{p.fullYearlyPrice}
-                      </span>
+                    <div className="absolute top-0 right-2 transform -translate-y-1/4">
+                      <span className="text-3xl font-light italic text-brand-orange line-through decoration-red-600 decoration-[1.5px] opacity-90 tracking-tighter">€{p.fullYearlyPrice.toFixed(2)}</span>
                     </div>
                   )}
                 </div>
-
-                <ul className="text-[11px] space-y-1 mb-6 opacity-80">
-                  {p.features.map((f: string) => <li key={f}>• {f}</li>)}
-                </ul>
+                <ul className="text-[11px] space-y-1 mb-6 opacity-80">{p.features.map((f: string) => <li key={f}>• {f}</li>)}</ul>
                 <ThreeDButton 
-                  variant={isActive ? 'danger' : 'primary'} 
-                  className="w-full py-3 text-sm" 
-                  onClick={() => isActive ? handleCancel() : handleSubscribe(p.id)}
+                  variant={isActive ? 'secondary' : 'primary'} 
+                  className="w-full py-3 text-sm disabled:opacity-50" 
+                  disabled={isActive || loadingPriceId !== null}
+                  onClick={() => startCheckout(priceId)}
                 >
-                  {isActive ? t.cancelSub : t.subscribe}
+                  {loadingPriceId === priceId ? 'Loading...' : isActive ? 'Current Plan' : t.subscribe}
                 </ThreeDButton>
               </GlassCard>
             );
@@ -136,63 +140,40 @@ const PricingPage: React.FC<PricingPageProps> = ({ onBack, t }) => {
         </div>
       </div>
 
-      {/* Prepaid Play Packs Section */}
       <div className="space-y-4 pt-4 border-t border-white/10">
-        <h3 className="text-sm font-black uppercase text-brand-gold tracking-widest ml-1">{t.prepaidPacks}</h3>
-        
-        <div className="glass p-5 rounded-3xl border-brand-gold/20 bg-brand-gold/5 space-y-3">
-          <div className="flex items-start gap-3">
-            <span className="text-xl">ℹ️</span>
-            <div className="space-y-2">
-              <p className="text-[11px] font-black uppercase text-brand-gold tracking-widest">{t.packRules}</p>
-              <ul className="text-[10px] text-white/70 space-y-1.5 leading-relaxed font-medium">
-                <li>• {t.packInfo1}</li>
-                <li>• {t.packInfo2}</li>
-                <li>• <span className="text-red-400 font-bold">{t.packInfo3}</span></li>
-                <li>• <span className="text-red-400 font-bold">{t.packInfo4}</span></li>
-                <li>• {t.packInfo5}</li>
-                <li>• {t.packInfo6}</li>
-                <li>• {t.packInfo7}</li>
-              </ul>
-            </div>
-          </div>
-        </div>
+        <h3 className="text-sm font-black uppercase text-brand-gold tracking-widest ml-1">{t.packRules}</h3>
+        <GlassCard className="bg-black/20 border-brand-gold/20 p-4">
+          <ul className="space-y-2">
+            {[t.packInfo1, t.packInfo2, t.packInfo3, t.packInfo4, t.packInfo5, t.packInfo6, t.packInfo7].map((info, idx) => (
+              <li key={idx} className="flex gap-2 items-start text-[10px] font-bold text-white/60 leading-relaxed">
+                <span className="text-brand-gold mt-0.5">•</span>
+                {info}
+              </li>
+            ))}
+          </ul>
+        </GlassCard>
+      </div>
 
+      <div className="space-y-4 pt-2">
+        <h3 className="text-sm font-black uppercase text-brand-gold tracking-widest ml-1">{t.prepaidPacks}</h3>
         <div className="grid grid-cols-1 gap-4">
           {playPacks.map(pack => (
-            <GlassCard 
-              key={pack.id} 
-              className={`relative border-brand-gold/20 hover:border-brand-gold/40 transition-colors ${pack.isBestSeller ? 'border-brand-orange bg-brand-orange/5 ring-1 ring-brand-orange/30 shadow-[0_0_20px_rgba(234,88,12,0.1)]' : ''}`}
-            >
-              {pack.isBestSeller && (
-                <div className="absolute -top-3 -right-3 bg-brand-orange text-white text-[10px] font-black px-4 py-1.5 rounded-full shadow-lg transform rotate-6 animate-pulse z-10">
-                  🔥 {t.bestSeller}
-                </div>
-              )}
-              
+            <GlassCard key={pack.id} className={`relative border-brand-gold/20 ${pack.isBestSeller ? 'border-brand-orange bg-brand-orange/5 shadow-lg' : ''}`}>
+              {pack.isBestSeller && <div className="absolute -top-3 -right-3 bg-brand-orange text-white text-[10px] font-black px-4 py-1.5 rounded-full z-10 animate-pulse">🔥 {t.bestSeller}</div>}
               <div className="flex justify-between items-center mb-4">
                 <div className="space-y-1">
                   <h3 className="text-lg font-black">{pack.name}</h3>
-                  <span className="bg-brand-gold/20 text-brand-gold px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter">
-                    {t.oneTimePayment || 'One-time Payment'}
-                  </span>
+                  <span className="bg-brand-gold/20 text-brand-gold px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter">One-time Payment</span>
                 </div>
-                <div className="text-right">
-                  <p className="text-2xl font-black text-white leading-none">€{pack.price}</p>
-                </div>
+                <p className="text-2xl font-black text-white">€{pack.price.toFixed(2)}</p>
               </div>
-
-              <div className="bg-white/5 rounded-2xl p-4 mb-6 border border-white/5 flex items-center justify-between">
-                <span className="text-xs font-bold text-white/50 uppercase tracking-widest">{t.included || 'Included'}:</span>
-                <span className="text-xl font-black text-brand-gold">{pack.count} {t.solo}</span>
-              </div>
-
               <ThreeDButton 
                 variant={pack.isBestSeller ? 'primary' : 'warning'} 
-                className="w-full py-4 text-sm" 
-                onClick={() => handleBuyPack(pack.count)}
+                className="w-full py-4 text-sm disabled:opacity-50" 
+                disabled={loadingPriceId !== null}
+                onClick={() => startCheckout(pack.priceId)}
               >
-                {t.buyPlays.replace('{count}', pack.count.toString())}
+                {loadingPriceId === pack.priceId ? 'Loading...' : t.buyPlays.replace('{count}', pack.count.toString())}
               </ThreeDButton>
             </GlassCard>
           ))}
