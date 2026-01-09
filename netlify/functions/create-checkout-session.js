@@ -1,6 +1,7 @@
+import Stripe from 'stripe';
+import admin from 'firebase-admin';
 
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const admin = require('firebase-admin');
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -15,15 +16,28 @@ const SUBSCRIPTION_PRICES = [
   'price_1SnPnRGvLCUKCR9vx4AtlCmF'
 ];
 
-exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
+export const handler = async (event) => {
+  const headers = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS'
+  };
+
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' };
+  }
+
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, headers, body: 'Method Not Allowed' };
+  }
 
   try {
     const { priceId, referrerUid } = JSON.parse(event.body);
     
     const authHeader = event.headers.authorization || event.headers.Authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
+      return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) };
     }
 
     const idToken = authHeader.split('Bearer ')[1];
@@ -32,10 +46,9 @@ exports.handler = async (event) => {
     const email = decodedToken.email;
 
     const isSubscription = SUBSCRIPTION_PRICES.includes(priceId);
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:8888';
+    const baseUrl = process.env.FRONTEND_URL || 'https://snapquizgame.app';
 
     const metadata = { uid };
-    // Level 1 metadata: Store referrer for later use in webhook
     if (referrerUid) {
       metadata.referrerUid = referrerUid;
     }
@@ -45,7 +58,7 @@ exports.handler = async (event) => {
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
       mode: isSubscription ? 'subscription' : 'payment',
-      success_url: `${baseUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${baseUrl}/?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/pricing`,
       metadata,
       allow_promotion_codes: true,
@@ -61,10 +74,15 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ url: session.url })
     };
   } catch (error) {
-    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
+    console.error("Checkout session creation failed:", error);
+    return { 
+      statusCode: 500, 
+      headers, 
+      body: JSON.stringify({ error: error.message }) 
+    };
   }
 };

@@ -1,5 +1,4 @@
-
-const admin = require('firebase-admin');
+import admin from 'firebase-admin';
 
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -9,13 +8,19 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-exports.handler = async (event) => {
-  const headers = { 'Content-Type': 'application/json' };
+export const handler = async (event) => {
+  const headers = { 
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS'
+  };
+
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
 
   try {
     const authHeader = event.headers.authorization || event.headers.Authorization;
-    if (!authHeader) return { statusCode: 401, body: 'Missing Auth' };
+    if (!authHeader) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Missing Auth' }) };
     
     const idToken = authHeader.split('Bearer ')[1];
     const decodedToken = await admin.auth().verifyIdToken(idToken);
@@ -24,7 +29,7 @@ exports.handler = async (event) => {
     // Security Check: Verify Admin
     const adminUids = (process.env.ADMIN_UIDS || '').split(',');
     if (!adminUids.includes(callerUid) && decodedToken.email !== 'info@snapquizgame.app') {
-      return { statusCode: 403, body: 'Forbidden' };
+      return { statusCode: 403, headers, body: JSON.stringify({ error: 'Forbidden' }) };
     }
 
     const { action, commissionId } = JSON.parse(event.body);
@@ -55,8 +60,13 @@ exports.handler = async (event) => {
       return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
     }
 
-    return { statusCode: 400, body: 'Unknown Action' };
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Unknown Action' }) };
   } catch (error) {
-    return { statusCode: 500, body: error.message };
+    console.error("Admin affiliate action error:", error);
+    return { 
+      statusCode: 500, 
+      headers, 
+      body: JSON.stringify({ error: error.message }) 
+    };
   }
 };
