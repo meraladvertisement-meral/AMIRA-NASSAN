@@ -1,5 +1,5 @@
-const Stripe = require('stripe');
-const admin = require('firebase-admin');
+import Stripe from 'stripe';
+import admin from 'firebase-admin';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -36,7 +36,7 @@ async function resolveUid(dataObject) {
   return null;
 }
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
   const sig = event.headers['stripe-signature'] || event.headers['Stripe-Signature'];
   if (!sig) return { statusCode: 400, body: 'Missing Signature' };
 

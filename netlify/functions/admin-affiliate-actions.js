@@ -1,4 +1,4 @@
-const admin = require('firebase-admin');
+import admin from 'firebase-admin';
 
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -8,7 +8,7 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
   const headers = { 
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
@@ -20,6 +20,8 @@ exports.handler = async (event) => {
 
   try {
     const authHeader = event.headers.authorization || event.headers.Authorization;
+    if (!authHeader) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Missing token' }) };
+    
     const idToken = authHeader.split('Bearer ')[1];
     const decodedToken = await admin.auth().verifyIdToken(idToken);
     const callerUid = decodedToken.uid;
@@ -36,7 +38,7 @@ exports.handler = async (event) => {
       return { statusCode: 200, headers, body: JSON.stringify(snap.docs.map(d => ({ id: d.id, ...d.data() }))) };
     }
 
-    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Unknown' }) };
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Unknown action' }) };
   } catch (error) {
     return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) };
   }

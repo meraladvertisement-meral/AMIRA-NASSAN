@@ -1,5 +1,5 @@
-const Stripe = require('stripe');
-const admin = require('firebase-admin');
+import Stripe from 'stripe';
+import admin from 'firebase-admin';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -16,7 +16,7 @@ const SUBSCRIPTION_PRICES = [
   'price_1SnPnRGvLCUKCR9vx4AtlCmF'
 ];
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
   const headers = {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',

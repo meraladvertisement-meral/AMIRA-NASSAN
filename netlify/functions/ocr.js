@@ -1,6 +1,6 @@
-const { GoogleGenAI } = require("@google/genai");
+import { GoogleGenAI } from "@google/genai";
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -13,14 +13,14 @@ exports.handler = async (event) => {
   }
 
   try {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+    const apiKey = process.env.API_KEY;
     const { image } = JSON.parse(event.body);
     const ai = new GoogleGenAI({ apiKey });
     
     const base64Data = image.includes('base64,') ? image.split(',')[1] : image;
     
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-lite-latest",
+      model: "gemini-3-flash-preview",
       contents: [{ 
         parts: [
           { text: "Extract all text from this image exactly." },

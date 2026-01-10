@@ -1,6 +1,6 @@
-const { GoogleGenAI, Type } = require("@google/genai");
+import { GoogleGenAI, Type } from "@google/genai";
 
-exports.handler = async (event, context) => {
+export const handler = async (event, context) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -13,7 +13,7 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+    const apiKey = process.env.API_KEY;
     
     if (!apiKey) {
       return {
@@ -32,11 +32,11 @@ exports.handler = async (event, context) => {
     const ai = new GoogleGenAI({ apiKey });
     const langName = language === 'de' ? 'German' : 'English';
 
-    const systemInstruction = `You are a professional educator. Create a quiz in ${langName}. Return ONLY valid JSON.`;
+    const systemInstruction = `You are a professional educator. Create a quiz in ${langName}. Return ONLY valid JSON matching the schema.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-lite-latest",
-      contents: [{ parts: [{ text: `Analyze and generate a quiz: ${content.substring(0, 10000)}` }] }],
+      model: "gemini-3-flash-preview",
+      contents: [{ parts: [{ text: `Analyze and generate a quiz with ${settings.questionCount} questions: ${content.substring(0, 10000)}` }] }],
       config: {
         systemInstruction,
         responseMimeType: "application/json",
