@@ -1,9 +1,8 @@
-
 import React, { useEffect, useState } from 'react';
 import { GlassCard } from '../components/layout/GlassCard';
 import { ThreeDButton } from '../components/layout/ThreeDButton';
 import { auth, db } from '../services/firebase';
-import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { doc, onSnapshot } from "firebase/firestore";
 
 interface PaymentSuccessPageProps {
   onContinue: () => void;
@@ -17,7 +16,6 @@ const PaymentSuccessPage: React.FC<PaymentSuccessPageProps> = ({ onContinue, t, 
   useEffect(() => {
     audio.playSfx('win');
     
-    // Listen for Firestore updates to confirm entitlement grant
     let unsub: any;
     if (auth.currentUser) {
       unsub = onSnapshot(doc(db, "users", auth.currentUser.uid), (snap) => {
@@ -26,7 +24,6 @@ const PaymentSuccessPage: React.FC<PaymentSuccessPageProps> = ({ onContinue, t, 
         }
       });
     } else {
-      // If guest or delay in auth, wait a bit
       const timer = setTimeout(() => setIsActivating(false), 3000);
       return () => clearTimeout(timer);
     }
@@ -70,4 +67,5 @@ const PaymentSuccessPage: React.FC<PaymentSuccessPageProps> = ({ onContinue, t, 
   );
 };
 
+// Fixed: Added default export to match App.tsx import
 export default PaymentSuccessPage;

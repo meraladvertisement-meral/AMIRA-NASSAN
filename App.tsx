@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AppScreen, GameMode, QuizSettings, QuizRecord, QuizResult, Question } from './types/quiz';
 import { Language, translations } from './i18n';
@@ -10,11 +11,11 @@ import {
   onAuthStateChanged, 
   signInWithPopup, 
   signOut 
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+} from "firebase/auth";
 import { 
   doc, 
   onSnapshot 
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+} from "firebase/firestore";
 
 // Pages
 import LandingPage from './pages/LandingPage';

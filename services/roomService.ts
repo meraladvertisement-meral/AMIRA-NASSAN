@@ -1,4 +1,3 @@
-
 import { 
   doc, 
   setDoc, 
@@ -12,7 +11,7 @@ import {
   query,
   orderBy,
   getDocs
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+} from "firebase/firestore";
 import { db, auth } from "./firebase";
 import { QuizRecord } from "../types/quiz";
 
@@ -34,7 +33,7 @@ export const roomService = {
     
     const sessionId = Math.random().toString(36).substring(2, 15);
     const joinCode = this.generateJoinCode();
-    const expiresAt = new Date(Date.now() + 45 * 60 * 1000); // 45 mins
+    const expiresAt = new Date(Date.now() + 45 * 60 * 1000);
 
     await runTransaction(db, async (transaction) => {
       const codeRef = doc(db, "joinCodes", joinCode);

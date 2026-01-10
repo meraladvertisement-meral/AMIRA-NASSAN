@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { GlassCard } from '../components/layout/GlassCard';
 import { ThreeDButton } from '../components/layout/ThreeDButton';
 import { roomService } from '../services/roomService';
 import { billingService } from '../services/billingService';
 import { auth, googleProvider } from '../services/firebase';
-import { signInWithPopup } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { signInWithPopup } from "firebase/auth";
 
 interface JoinRoomPageProps {
   onJoinSuccess: (roomId: string) => void;
@@ -13,6 +12,7 @@ interface JoinRoomPageProps {
   t: any;
 }
 
+// Fixed: Changed from named export to default export to match App.tsx import
 const JoinRoomPage: React.FC<JoinRoomPageProps> = ({ onJoinSuccess, onBack, t }) => {
   const [code, setCode] = useState('');
   const [playerName, setPlayerName] = useState('');
@@ -38,7 +38,6 @@ const JoinRoomPage: React.FC<JoinRoomPageProps> = ({ onJoinSuccess, onBack, t })
     try {
       const roomId = await roomService.findSessionByCode(roomCode.toUpperCase());
       if (roomId) {
-        // Pass optional custom name
         await roomService.joinSession(roomId, playerName.trim() || undefined);
         billingService.consumeGuestPlay();
         onJoinSuccess(roomId);

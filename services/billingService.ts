@@ -1,4 +1,4 @@
-import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { doc, getDoc } from "firebase/firestore";
 import { db, auth } from "./firebase";
 import { Entitlement, GuestUsage, PlayPack } from '../types/billing';
 
@@ -6,8 +6,6 @@ const STORAGE_KEY = 'sqg_billing_v2';
 const GUEST_STORAGE_KEY = 'sqg_guest_usage';
 
 export const billingService = {
-  // We can't use await here without making it async, 
-  // so we'll fetch sync from LocalStorage and App.tsx will handle the sync from Firestore.
   getEntitlement(): Entitlement {
     const saved = localStorage.getItem(STORAGE_KEY);
     const today = new Date().setHours(0,0,0,0);
@@ -37,14 +35,12 @@ export const billingService = {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(ent));
   },
 
-  // Add bonus plays to the user's current entitlement and save locally
   addBonusPlays(count: number) {
     const ent = this.getEntitlement();
     ent.bonusPlays += count;
     this.save(ent);
   },
 
-  // This will be called by App.tsx whenever Firebase Auth or User Doc changes
   syncFromFirestore(userData: any) {
     if (!userData) return;
     const current = this.getEntitlement();
@@ -53,7 +49,6 @@ export const billingService = {
       planId: userData.subscription?.plan || 'free',
       cycle: userData.subscription?.period || 'monthly',
       bonusPlays: userData.soloPlaysBalance || 0,
-      // Map other fields as needed
     };
     this.save(synced);
   },

@@ -1,4 +1,3 @@
-
 import { 
   doc, 
   setDoc, 
@@ -8,9 +7,8 @@ import {
   collection, 
   serverTimestamp,
   Timestamp
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+} from "firebase/firestore";
 
-// استيراد db من الملف المركزي الجديد
 import { db } from "./firebase";
 
 export interface RoomData {
@@ -54,7 +52,6 @@ export const firebaseService = {
     if (!snap.exists()) return null;
     
     const data = snap.data() as RoomData;
-    // Check expiration
     if (data.expiresAt && data.expiresAt.toDate() < new Date()) {
       return null;
     }
