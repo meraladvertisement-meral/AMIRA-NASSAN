@@ -97,7 +97,9 @@ export const translations = {
     music: "Music",
     sfx: "Effects",
     referralBonusInfo: "Get +2 Bonus Plays when a friend joins via your link!",
-    limitReachedMessage: "Daily limit reached! 🚀 Share your link with a friend to earn +2 extra plays, or upgrade your plan to keep the fun going!"
+    limitReachedMessage: "Daily limit reached! 🚀 Share your link with a friend to earn +2 extra plays, or upgrade your plan to keep the fun going!",
+    legalAgreement: "I agree to the Terms of Use and Privacy Policy. I acknowledge that by purchasing, I request immediate access to the digital content and my 14-day right of withdrawal expires.",
+    pleaseAgree: "Please agree to the legal terms before purchasing."
   },
   de: {
     mixed: "Gemischt",
@@ -194,6 +196,8 @@ export const translations = {
     music: "Musik",
     sfx: "Effekte",
     referralBonusInfo: "Erhalte +2 Bonus-Spiele, wenn ein Freund über deinen Link beitritt!",
-    limitReachedMessage: "شارك والعب مع صديق واكسب لعبتين مجانية اضافية او رقي اشتراكك"
+    limitReachedMessage: "شارك والعب مع صديق واكسب لعبتين مجانية اضافية او رقي اشتراكك",
+    legalAgreement: "Ich stimme den AGB und der Datenschutzerklärung zu. Ich erkenne an, dass ich mit dem Kauf den sofortigen Zugang zu den digitalen Inhalten verlange und mein 14-tägiges Widerrufsrecht erlischt.",
+    pleaseAgree: "Bitte stimmen Sie den rechtlichen Bedingungen zu, bevor Sie fortfahren."
   }
 };

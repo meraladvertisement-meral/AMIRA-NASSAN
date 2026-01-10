@@ -15,6 +15,7 @@ const PricingPage: React.FC<PricingPageProps> = ({ onBack, t }) => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [loadingPriceId, setLoadingPriceId] = useState<string | null>(null);
   const [entitlement, setEntitlement] = useState<Entitlement>(billingService.getEntitlement());
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   
   useEffect(() => {
     setEntitlement(billingService.getEntitlement());
@@ -52,6 +53,11 @@ const PricingPage: React.FC<PricingPageProps> = ({ onBack, t }) => {
   const startCheckout = async (priceId: string) => {
     if (!auth.currentUser) {
       alert("Please sign in to make a purchase.");
+      return;
+    }
+
+    if (!agreedToTerms) {
+      alert(t.pleaseAgree);
       return;
     }
     
@@ -97,6 +103,26 @@ const PricingPage: React.FC<PricingPageProps> = ({ onBack, t }) => {
         <p className="text-[11px] font-bold text-white/80 leading-snug">{t.dailyCreditsInfo}</p>
       </div>
 
+      {/* Legal Agreement Checkbox */}
+      <GlassCard className={`border-2 transition-all duration-300 ${agreedToTerms ? 'border-brand-lime bg-brand-lime/5' : 'border-red-500/30 bg-red-500/5'}`}>
+        <label className="flex items-start gap-4 cursor-pointer group">
+          <div className="relative mt-1">
+            <input 
+              type="checkbox" 
+              className="peer hidden" 
+              checked={agreedToTerms}
+              onChange={() => setAgreedToTerms(!agreedToTerms)}
+            />
+            <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${agreedToTerms ? 'bg-brand-lime border-brand-lime' : 'bg-white/10 border-white/20'}`}>
+              {agreedToTerms && <span className="text-brand-dark font-black text-sm">✓</span>}
+            </div>
+          </div>
+          <p className={`text-[11px] font-bold leading-relaxed transition-colors ${agreedToTerms ? 'text-white' : 'text-white/60'}`}>
+            {t.legalAgreement}
+          </p>
+        </label>
+      </GlassCard>
+
       <div className="space-y-4">
         <h3 className="text-sm font-black uppercase text-brand-lime tracking-widest ml-1">{t.subscriptions}</h3>
         <div className="flex bg-white/10 p-1 rounded-2xl border border-white/5">
@@ -128,8 +154,8 @@ const PricingPage: React.FC<PricingPageProps> = ({ onBack, t }) => {
                 <ul className="text-[11px] space-y-1 mb-6 opacity-80">{p.features.map((f: string) => <li key={f}>• {f}</li>)}</ul>
                 <ThreeDButton 
                   variant={isActive ? 'secondary' : 'primary'} 
-                  className="w-full py-3 text-sm disabled:opacity-50" 
-                  disabled={isActive || loadingPriceId !== null}
+                  className={`w-full py-3 text-sm transition-all duration-500 ${!agreedToTerms && !isActive ? 'opacity-30 grayscale' : ''}`} 
+                  disabled={isActive || loadingPriceId !== null || (!agreedToTerms && !isActive)}
                   onClick={() => startCheckout(priceId)}
                 >
                   {loadingPriceId === priceId ? 'Loading...' : isActive ? 'Current Plan' : t.subscribe}
@@ -169,8 +195,8 @@ const PricingPage: React.FC<PricingPageProps> = ({ onBack, t }) => {
               </div>
               <ThreeDButton 
                 variant={pack.isBestSeller ? 'primary' : 'warning'} 
-                className="w-full py-4 text-sm disabled:opacity-50" 
-                disabled={loadingPriceId !== null}
+                className={`w-full py-4 text-sm transition-all duration-500 ${!agreedToTerms ? 'opacity-30 grayscale' : ''}`} 
+                disabled={loadingPriceId !== null || !agreedToTerms}
                 onClick={() => startCheckout(pack.priceId)}
               >
                 {loadingPriceId === pack.priceId ? 'Loading...' : t.buyPlays.replace('{count}', pack.count.toString())}
