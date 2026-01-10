@@ -49,7 +49,6 @@ const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, mode, roo
   useEffect(() => {
     audio.enableAudio();
     audio.startMusic('calm');
-    // Ensure music stops on unmount
     return () => audio.stopMusic();
   }, [audio]);
 

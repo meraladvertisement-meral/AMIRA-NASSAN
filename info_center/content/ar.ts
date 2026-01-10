@@ -28,8 +28,8 @@ export const infoContent = {
       items: [
         "Each user has a unique referral link",
         "Fixed commission: €3 per successful paid subscription",
+        "NEW: Earn +2 Bonus Plays instantly when a friend joins via your link and plays just one quiz!",
         "Commission states: Pending right after payment, Available after 30 days with no cancellation/refund",
-        "No subscription type (monthly/yearly) shown in dashboard",
         "No commission for buying play credits (Play Packs)",
         "Minimum payout: €20"
       ]
@@ -105,8 +105,8 @@ export const infoContent = {
       items: [
         "Jeder Nutzer hat einen einzigartigen Empfehlungslink",
         "Feste Provision: €3 pro erfolgreichem kostenpflichtigem Abonnement",
+        "NEU: Erhalte sofort +2 Bonus-Spiele, wenn ein Freund über deinen Link beitritt und ein Quiz spielt!",
         "Provisionsstatus: Ausstehend direkt nach der Zahlung, Verfügbar nach 30 Tagen ohne Stornierung/Rückerstattung",
-        "Keine Anzeige des Abonnementtyps (monatlich/jährlich) im Dashboard",
         "Keine Provision für den Kauf von Spielguthaben (Play Packs)",
         "Mindestauszahlung: €20"
       ]

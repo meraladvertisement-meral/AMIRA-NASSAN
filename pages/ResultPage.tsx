@@ -19,16 +19,18 @@ const ResultPage: React.FC<ResultPageProps> = ({ result, onHome, onBalloon, onLe
 
   useEffect(() => {
     if (isWinner) audio.playSfx('win');
+    // Ensure music stops when results are shown
+    audio.stopMusic();
   }, [isWinner, audio]);
 
   return (
     <div className="p-6 max-w-lg mx-auto min-h-screen flex flex-col justify-center gap-6 animate-in fade-in duration-700">
       <div className="text-center">
         <h2 className="text-5xl font-black italic mb-2 text-white drop-shadow-lg">
-          {isWinner ? (t.appName === 'SnapQuizGame' ? 'AMAZING!' : 'رائع!') : (t.appName === 'SnapQuizGame' ? 'GOOD TRY!' : 'محاولة جيدة!')}
+          {isWinner ? 'AMAZING!' : 'GOOD TRY!'}
         </h2>
         <p className="text-brand-lime font-bold tracking-widest uppercase animate-pulse">
-          {t.appName === 'SnapQuizGame' ? 'Quiz Completed' : 'اكتمل الاختبار'}
+          {t.results}
         </p>
       </div>
 
@@ -49,14 +51,16 @@ const ResultPage: React.FC<ResultPageProps> = ({ result, onHome, onBalloon, onLe
         )}
         
         <div className="grid grid-cols-2 gap-3">
-          <ThreeDButton 
-            variant="primary" 
-            className="w-full py-4 text-lg" 
-            onClick={onLeaderboard}
-            style={{ display: showLeaderboardBtn ? 'block' : 'none' }}
-          >
-            🏆 {t.results}
-          </ThreeDButton>
+          {/* Always show leaderboard button in multiplayer modes */}
+          {showLeaderboardBtn && (
+            <ThreeDButton 
+              variant="primary" 
+              className="w-full py-4 text-lg" 
+              onClick={onLeaderboard}
+            >
+              🏆 {t.results}
+            </ThreeDButton>
+          )}
           
           <ThreeDButton 
             variant="secondary" 

@@ -93,8 +93,11 @@ export const translations = {
     extractingText: "Extracting Text...",
     textReady: "Text Ready!",
     enterName: "Your Name (Optional)",
+    roomCode: "Room Code",
     music: "Music",
-    sfx: "Effects"
+    sfx: "Effects",
+    referralBonusInfo: "Get +2 Bonus Plays when a friend joins via your link!",
+    limitReachedMessage: "Daily limit reached! 🚀 Share your link with a friend to earn +2 extra plays, or upgrade your plan to keep the fun going!"
   },
   de: {
     mixed: "Gemischt",
@@ -187,7 +190,10 @@ export const translations = {
     extractingText: "Extrahiere Text...",
     textReady: "Text bereit!",
     enterName: "Dein Name (Optional)",
+    roomCode: "Raum-Code",
     music: "Musik",
-    sfx: "Effekte"
+    sfx: "Effekte",
+    referralBonusInfo: "Erhalte +2 Bonus-Spiele, wenn ein Freund über deinen Link beitritt!",
+    limitReachedMessage: "Tageslimit erreicht! 🚀 Teile deinen Link mit einem Freund, um +2 Gratis-Spiele zu erhalten, oder upgrade deinen Plan!"
   }
 };

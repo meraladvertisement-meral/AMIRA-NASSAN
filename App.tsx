@@ -142,7 +142,6 @@ export default function App() {
       await signInWithPopup(auth, googleProvider);
     } catch (e: any) {
       console.error("Login Error:", e);
-      // Handle the unauthorized domain error specifically to guide the developer/user
       if (e.code === 'auth/unauthorized-domain') {
         alert(
           "Firebase Auth Error: This domain is not authorized.\n\n" +
@@ -195,6 +194,7 @@ export default function App() {
 
   const handleStartQuiz = async (content: string, isImage: boolean = false) => {
     if (!billingService.consumePlay(isAdmin)) {
+      alert(t.limitReachedMessage); // Nice message when daily limit is hit
       setInfoSection('plans');
       setScreen('PRICING');
       return;
@@ -259,6 +259,7 @@ export default function App() {
 
   const handleStartManual = async (questions: Question[]) => {
     if (!billingService.consumePlay(isAdmin)) {
+      alert(t.limitReachedMessage); // Nice message when daily limit is hit
       setInfoSection('plans');
       setScreen('PRICING');
       return;

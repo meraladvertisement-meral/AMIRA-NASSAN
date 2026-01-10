@@ -3,8 +3,8 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
 const SFX = {
   click: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
-  correct: 'https://assets.mixkit.co/active_storage/sfx/1913/1913-preview.mp3', // Better Bell sound
-  wrong: 'https://assets.mixkit.co/active_storage/sfx/1000/1000-preview.mp3', // Professional Buzzer
+  correct: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3', // Win/Success bell
+  wrong: 'https://assets.mixkit.co/active_storage/sfx/1000/1000-preview.mp3', // Sharp Buzzer
   pop: 'https://assets.mixkit.co/active_storage/sfx/2569/2569-preview.mp3',
   win: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3',
   tick: 'https://assets.mixkit.co/active_storage/sfx/2570/2570-preview.mp3',
@@ -44,10 +44,7 @@ export function useAudio() {
   const stopMusic = useCallback(() => {
     if (musicRef.current) {
       musicRef.current.pause();
-      musicRef.current.onended = null;
-      musicRef.current.oncanplay = null;
-      musicRef.current.src = "";
-      musicRef.current.load(); 
+      musicRef.current.currentTime = 0;
       musicRef.current = null;
     }
   }, []);
@@ -90,7 +87,7 @@ export function useAudio() {
     setIsSfxMuted(prev => !prev);
   }, []);
 
-  const audioContext = useMemo(() => ({
+  return useMemo(() => ({
     isMusicMuted,
     isSfxMuted,
     toggleMusicMute,
@@ -101,6 +98,4 @@ export function useAudio() {
     enableAudio,
     audioEnabled
   }), [isMusicMuted, isSfxMuted, toggleMusicMute, toggleSfxMute, playSfx, startMusic, stopMusic, enableAudio, audioEnabled]);
-
-  return audioContext;
 }
