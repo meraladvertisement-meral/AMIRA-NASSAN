@@ -129,7 +129,7 @@ export const infoContent = {
         "Keine Passwörter oder sensiblen Daten werden gesammelt",
         "Nur die Google-Nutzer-ID wird erfasst",
         "Bilder und Texte werden nur zur Fragenerstellung verwendet",
-        "Zahlungsdaten werden nicht gespeichert",
+        "Zahlationsdaten werden nicht gespeichert",
         "Daten werden nicht verkauft"
       ]
     },

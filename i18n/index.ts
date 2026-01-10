@@ -194,6 +194,6 @@ export const translations = {
     music: "Musik",
     sfx: "Effekte",
     referralBonusInfo: "Erhalte +2 Bonus-Spiele, wenn ein Freund über deinen Link beitritt!",
-    limitReachedMessage: "Tageslimit erreicht! 🚀 Teile deinen Link mit einem Freund, um +2 Gratis-Spiele zu erhalten, oder upgrade deinen Plan!"
+    limitReachedMessage: "شارك والعب مع صديق واكسب لعبتين مجانية اضافية او رقي اشتراكك"
   }
 };
