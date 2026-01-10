@@ -1,4 +1,4 @@
-
+//test
 export type Language = 'en' | 'de' | 'ar';
 
 export const translations = {
