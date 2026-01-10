@@ -78,10 +78,10 @@ export const roomService = {
     return data.sessionId;
   },
 
-  async joinSession(sessionId: string) {
+  async joinSession(sessionId: string, customName?: string) {
     const user = auth.currentUser || { 
       uid: localStorage.getItem('sqg_guest_uid') || 'guest-' + Math.random().toString(36).substr(2, 5),
-      displayName: 'Player'
+      displayName: customName || `Player #${Math.floor(Math.random() * 900) + 100}`
     };
 
     const sessionRef = doc(db, "sessions", sessionId);
@@ -91,7 +91,6 @@ export const roomService = {
     const data = sessionSnap.data();
     if (data.status !== 'lobby') throw new Error("ROOM_ALREADY_STARTED");
 
-    // Duel mode restriction: Max 2 players
     if (data.mode === 'DUEL') {
       const playersSnap = await getDocs(collection(db, "sessions", sessionId, "players"));
       const isAlreadyIn = playersSnap.docs.some(doc => doc.id === user.uid);
@@ -103,7 +102,7 @@ export const roomService = {
     const playerRef = doc(db, "sessions", sessionId, "players", user.uid);
     await setDoc(playerRef, {
       uid: user.uid,
-      displayName: user.displayName || "Player",
+      displayName: customName || user.displayName || "Player",
       status: 'active',
       score: 0,
       progress: 0,

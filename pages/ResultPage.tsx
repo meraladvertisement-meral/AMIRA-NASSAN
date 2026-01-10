@@ -22,17 +22,17 @@ const ResultPage: React.FC<ResultPageProps> = ({ result, onHome, onBalloon, onLe
   }, [isWinner, audio]);
 
   return (
-    <div className="p-6 max-w-lg mx-auto min-h-screen flex flex-col justify-center gap-6">
+    <div className="p-6 max-w-lg mx-auto min-h-screen flex flex-col justify-center gap-6 animate-in fade-in duration-700">
       <div className="text-center">
-        <h2 className="text-5xl font-black italic mb-2 text-white drop-shadow-lg animate-in zoom-in duration-500">
-          {isWinner ? (t.appName === 'سناب كويز' ? 'رائع!' : 'AMAZING!') : (t.appName === 'سناب كويز' ? 'محاولة جيدة!' : 'GOOD TRY!')}
+        <h2 className="text-5xl font-black italic mb-2 text-white drop-shadow-lg">
+          {isWinner ? (t.appName === 'SnapQuizGame' ? 'AMAZING!' : 'رائع!') : (t.appName === 'SnapQuizGame' ? 'GOOD TRY!' : 'محاولة جيدة!')}
         </h2>
         <p className="text-brand-lime font-bold tracking-widest uppercase animate-pulse">
-          {t.appName === 'سناب كويز' ? 'اكتمل الاختبار' : 'Quiz Completed'}
+          {t.appName === 'SnapQuizGame' ? 'Quiz Completed' : 'اكتمل الاختبار'}
         </p>
       </div>
 
-      <GlassCard className="text-center py-10 border-white/20">
+      <GlassCard className="text-center py-10 border-white/20 shadow-2xl">
         <div className="text-7xl font-black mb-2 text-brand-gold drop-shadow-[0_0_20px_rgba(245,158,11,0.3)]">
           {Math.round(result.percentage)}%
         </div>
@@ -49,11 +49,14 @@ const ResultPage: React.FC<ResultPageProps> = ({ result, onHome, onBalloon, onLe
         )}
         
         <div className="grid grid-cols-2 gap-3">
-          {showLeaderboardBtn && (
-            <ThreeDButton variant="primary" className="w-full py-4 text-lg" onClick={onLeaderboard}>
-              🏆 {t.results}
-            </ThreeDButton>
-          )}
+          <ThreeDButton 
+            variant="primary" 
+            className="w-full py-4 text-lg" 
+            onClick={onLeaderboard}
+            style={{ display: showLeaderboardBtn ? 'block' : 'none' }}
+          >
+            🏆 {t.results}
+          </ThreeDButton>
           
           <ThreeDButton 
             variant="secondary" 

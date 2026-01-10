@@ -49,8 +49,15 @@ const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, mode, roo
   useEffect(() => {
     audio.enableAudio();
     audio.startMusic('calm');
+    // Ensure music stops on unmount
     return () => audio.stopMusic();
   }, [audio]);
+
+  useEffect(() => {
+    if (isFinished) {
+      audio.stopMusic();
+    }
+  }, [isFinished, audio]);
 
   useEffect(() => {
     if (roomId && (mode === GameMode.TEACHER || mode === GameMode.DUEL)) {
@@ -65,14 +72,12 @@ const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, mode, roo
     if (feedback.selected) return; 
 
     const isCorrect = choice.trim().toLowerCase() === currentQuestion.correctAnswer.trim().toLowerCase();
-    
-    // هل سينتقل السؤال الآن أم هناك فرصة ثانية (في حال FITB)
     const willAdvance = isCorrect || currentQuestion.type !== 'FITB' || fitbMode === 'MCQ';
 
     setFeedback({
       selected: choice,
       isCorrect: isCorrect,
-      showCorrect: !isCorrect // دائماً أظهر الصحيحة عند الخطأ
+      showCorrect: !isCorrect 
     });
 
     if (isCorrect) {
@@ -84,7 +89,6 @@ const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, mode, roo
       }, 1000);
     } else {
       audio.playSfx('wrong');
-      // إذا كان سيغادر السؤال، نعطيه وقت أطول لرؤية الإجابة الصحيحة
       const waitTime = willAdvance ? 1800 : 1000;
       setTimeout(() => {
         handleAnswer(choice);
@@ -102,15 +106,8 @@ const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, mode, roo
   const getButtonVariant = (opt: string) => {
     const isSelected = feedback.selected === opt;
     const isCorrectAnswer = opt.trim().toLowerCase() === currentQuestion.correctAnswer.trim().toLowerCase();
-    
-    // إذا أخطأ المستخدم، نلون الإجابة الصحيحة بالأخضر
     if (feedback.showCorrect && isCorrectAnswer) return 'primary';
-    
-    // تلوين اختيار المستخدم
-    if (isSelected) {
-      return feedback.isCorrect ? 'primary' : 'danger';
-    }
-    
+    if (isSelected) return feedback.isCorrect ? 'primary' : 'danger';
     return 'secondary';
   };
 
@@ -121,7 +118,7 @@ const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, mode, roo
           ✕ {t.home}
         </button>
         <div className="flex flex-col items-center">
-          <span className="text-[10px] opacity-40 font-black tracking-widest">{t.appName === 'سناب كويز' ? 'السؤال' : 'Question'}</span>
+          <span className="text-[10px] opacity-40 font-black tracking-widest">Question</span>
           <span className="text-lg italic">{currentIndex + 1} / {quiz.questions.length}</span>
         </div>
         <div className="flex flex-col items-end">
@@ -189,7 +186,7 @@ const QuizPage: React.FC<QuizPageProps> = ({ quiz, onComplete, onQuit, mode, roo
                   feedback.isCorrect === true ? 'border-brand-lime text-brand-lime' : 
                   feedback.isCorrect === false ? 'border-red-500 text-red-500' : 'border-white/10'
                 }`}
-                placeholder={t.appName === 'سناب كويز' ? "اكتب إجابتك هنا..." : "Type your answer..."}
+                placeholder="Type your answer..."
               />
               {feedback.showCorrect && (
                 <div className="text-center animate-pulse">

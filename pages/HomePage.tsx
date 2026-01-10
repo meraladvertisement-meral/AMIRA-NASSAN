@@ -51,43 +51,33 @@ const HomePage: React.FC<HomePageProps> = ({
           </div>
         </div>
         
-        <div className="flex items-center gap-3">
-          {isAdmin && (
-            <button 
-              onClick={onOpenAdminAffiliates}
-              className="w-10 h-10 flex items-center justify-center rounded-xl bg-brand-gold/20 text-brand-gold border border-brand-gold/30 shadow-lg active:scale-90 transition-all"
-              title="Admin Affiliates"
-            >
-              👑
-            </button>
-          )}
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => { audio.enableAudio(); audio.toggleMusicMute(); }}
+            className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all border ${audio.isMusicMuted ? 'bg-white/5 border-white/10 opacity-40' : 'bg-brand-purple/20 border-brand-purple/40 text-brand-purple'}`}
+            title={t.music}
+          >
+            <span className="text-sm">🎵</span>
+          </button>
           
           <button 
-            onClick={() => { 
-              audio.enableAudio();
-              audio.playSfx('click'); 
-              audio.toggleMute(); 
-            }}
-            className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-300 active:scale-90 shadow-lg border ${
-              audio.isMuted 
-                ? 'bg-red-500/10 text-red-400 border-red-500/30' 
-                : 'bg-brand-lime/20 text-brand-lime border-brand-lime/30'
-            }`}
+            onClick={() => { audio.enableAudio(); audio.toggleSfxMute(); }}
+            className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all border ${audio.isSfxMuted ? 'bg-white/5 border-white/10 opacity-40' : 'bg-brand-lime/20 border-brand-lime/40 text-brand-lime'}`}
+            title={t.sfx}
           >
-            <span className="text-lg leading-none">{audio.isMuted ? '🔇' : '🔊'}</span>
+            <span className="text-sm">🔊</span>
           </button>
           
           <button 
             onClick={onLogout} 
-            className="glass px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-white/20 transition-all border-white/20 active:scale-95"
+            className="glass px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-white/20 transition-all border-white/20 ml-1"
           >
-            {t.logout || 'Logout'}
+            {t.logout}
           </button>
         </div>
       </header>
 
       <main className="p-6 max-w-lg mx-auto w-full flex-1 flex flex-col justify-center gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        {/* Welcome Banner */}
         <div className="text-center mb-2">
           <h2 className="text-3xl font-black text-white italic tracking-tight">
             {t.appName === 'SnapQuizGame' ? 'Ready to Snap?' : 'جاهز للتحدي؟'}
@@ -131,7 +121,7 @@ const HomePage: React.FC<HomePageProps> = ({
         <div className="grid grid-cols-2 gap-4">
           <button 
             onClick={() => { audio.enableAudio(); onHistory(); }}
-            className="glass group p-6 rounded-[2rem] flex flex-col items-center gap-2 hover:bg-white/20 transition-all active:scale-95 border-white/10"
+            className="glass group p-6 rounded-[2rem] flex flex-col items-center gap-2 hover:bg-white/20 transition-all border-white/10"
           >
             <span className="text-2xl group-hover:scale-110 transition-transform">📁</span>
             <span className="text-[10px] font-black uppercase tracking-widest opacity-70">{t.history}</span>
@@ -139,7 +129,7 @@ const HomePage: React.FC<HomePageProps> = ({
           
           <button 
             onClick={() => { audio.enableAudio(); onPricing(); }} 
-            className="glass group p-6 rounded-[2rem] flex flex-col items-center gap-2 hover:bg-white/20 transition-all active:scale-95 border-white/10"
+            className="glass group p-6 rounded-[2rem] flex flex-col items-center gap-2 hover:bg-white/20 transition-all border-white/10"
           >
             <span className="text-2xl group-hover:scale-110 transition-transform">💎</span>
             <span className="text-[10px] font-black uppercase tracking-widest opacity-70">{t.pricing}</span>
@@ -156,8 +146,6 @@ const HomePage: React.FC<HomePageProps> = ({
           <button onClick={() => onInfoCenter('impressum')} className="hover:text-brand-lime transition-colors">{t.impressum}</button>
         </div>
       </footer>
-
-      <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-brand-dark/20 to-transparent pointer-events-none -z-10"></div>
     </div>
   );
 };

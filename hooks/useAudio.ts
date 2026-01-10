@@ -3,8 +3,8 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
 const SFX = {
   click: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
-  correct: 'https://assets.mixkit.co/active_storage/sfx/2700/2700-preview.mp3',
-  wrong: 'https://assets.mixkit.co/active_storage/sfx/2561/2561-preview.mp3',
+  correct: 'https://assets.mixkit.co/active_storage/sfx/1913/1913-preview.mp3', // Better Bell sound
+  wrong: 'https://assets.mixkit.co/active_storage/sfx/1000/1000-preview.mp3', // Professional Buzzer
   pop: 'https://assets.mixkit.co/active_storage/sfx/2569/2569-preview.mp3',
   win: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3',
   tick: 'https://assets.mixkit.co/active_storage/sfx/2570/2570-preview.mp3',
@@ -17,20 +17,29 @@ const MUSIC = {
 };
 
 export function useAudio() {
-  const [isMuted, setIsMuted] = useState(() => {
-    const saved = localStorage.getItem('sqg_muted');
-    return saved === null ? true : saved === 'true';
+  const [isMusicMuted, setIsMusicMuted] = useState(() => {
+    const saved = localStorage.getItem('sqg_music_muted');
+    return saved === null ? false : saved === 'true';
+  });
+  
+  const [isSfxMuted, setIsSfxMuted] = useState(() => {
+    const saved = localStorage.getItem('sqg_sfx_muted');
+    return saved === null ? false : saved === 'true';
   });
   
   const [audioEnabled, setAudioEnabled] = useState(false);
   const musicRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    localStorage.setItem('sqg_muted', isMuted.toString());
+    localStorage.setItem('sqg_music_muted', isMusicMuted.toString());
     if (musicRef.current) {
-      musicRef.current.muted = isMuted;
+      musicRef.current.muted = isMusicMuted;
     }
-  }, [isMuted]);
+  }, [isMusicMuted]);
+
+  useEffect(() => {
+    localStorage.setItem('sqg_sfx_muted', isSfxMuted.toString());
+  }, [isSfxMuted]);
 
   const stopMusic = useCallback(() => {
     if (musicRef.current) {
@@ -44,13 +53,13 @@ export function useAudio() {
   }, []);
 
   const playSfx = useCallback((type: keyof typeof SFX) => {
-    if (isMuted || !audioEnabled) return;
+    if (isSfxMuted || !audioEnabled) return;
     try {
       const audio = new Audio(SFX[type]);
       audio.volume = type === 'tick' ? 0.2 : 0.5;
       audio.play().catch(() => {});
     } catch (e) {}
-  }, [isMuted, audioEnabled]);
+  }, [isSfxMuted, audioEnabled]);
 
   const startMusic = useCallback((type: keyof typeof MUSIC) => {
     if (!audioEnabled) return;
@@ -58,12 +67,12 @@ export function useAudio() {
     try {
       const audioObj = new Audio(MUSIC[type]);
       audioObj.loop = true;
-      audioObj.muted = isMuted;
-      audioObj.volume = 0.25;
+      audioObj.muted = isMusicMuted;
+      audioObj.volume = 0.2;
       musicRef.current = audioObj;
       audioObj.play().catch(() => {});
     } catch (e) {}
-  }, [isMuted, audioEnabled, stopMusic]);
+  }, [isMusicMuted, audioEnabled, stopMusic]);
 
   const enableAudio = useCallback(() => {
     if (audioEnabled) return;
@@ -73,19 +82,25 @@ export function useAudio() {
     silent.play().catch(() => {});
   }, [audioEnabled]);
 
-  const toggleMute = useCallback(() => {
-    setIsMuted(prev => !prev);
+  const toggleMusicMute = useCallback(() => {
+    setIsMusicMuted(prev => !prev);
+  }, []);
+
+  const toggleSfxMute = useCallback(() => {
+    setIsSfxMuted(prev => !prev);
   }, []);
 
   const audioContext = useMemo(() => ({
-    isMuted,
-    toggleMute,
+    isMusicMuted,
+    isSfxMuted,
+    toggleMusicMute,
+    toggleSfxMute,
     playSfx,
     startMusic,
     stopMusic,
     enableAudio,
     audioEnabled
-  }), [isMuted, toggleMute, playSfx, startMusic, stopMusic, enableAudio, audioEnabled]);
+  }), [isMusicMuted, isSfxMuted, toggleMusicMute, toggleSfxMute, playSfx, startMusic, stopMusic, enableAudio, audioEnabled]);
 
   return audioContext;
 }

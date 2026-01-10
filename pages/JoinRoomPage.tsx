@@ -15,6 +15,7 @@ interface JoinRoomPageProps {
 
 const JoinRoomPage: React.FC<JoinRoomPageProps> = ({ onJoinSuccess, onBack, t }) => {
   const [code, setCode] = useState('');
+  const [playerName, setPlayerName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [guestRemaining, setGuestRemaining] = useState(5);
@@ -37,7 +38,7 @@ const JoinRoomPage: React.FC<JoinRoomPageProps> = ({ onJoinSuccess, onBack, t })
     try {
       const roomId = await roomService.findSessionByCode(roomCode.toUpperCase());
       if (roomId) {
-        await roomService.joinSession(roomId);
+        await roomService.joinSession(roomId, playerName.trim() || undefined);
         billingService.consumeGuestPlay();
         onJoinSuccess(roomId);
       } else {
@@ -55,16 +56,17 @@ const JoinRoomPage: React.FC<JoinRoomPageProps> = ({ onJoinSuccess, onBack, t })
     } finally {
       setLoading(false);
     }
-  }, [onJoinSuccess, t]);
+  }, [onJoinSuccess, t, playerName]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const joinCode = params.get('join');
     if (joinCode && joinCode.length === 6) {
       setCode(joinCode.toUpperCase());
-      handleJoin(joinCode);
+      // we don't auto-join here to allow name input, 
+      // but we pre-fill the code.
     }
-  }, [handleJoin]);
+  }, []);
 
   const handleSignIn = async () => {
     try {
@@ -75,32 +77,47 @@ const JoinRoomPage: React.FC<JoinRoomPageProps> = ({ onJoinSuccess, onBack, t })
   };
 
   return (
-    <div className="p-6 max-w-lg mx-auto min-h-screen flex flex-col justify-center gap-6">
+    <div className="p-6 max-w-lg mx-auto min-h-screen flex flex-col justify-center gap-6 animate-in fade-in duration-500">
       <div className="flex justify-between items-center mb-4">
         <div className="flex flex-col">
-          <h2 className="text-3xl font-black italic text-brand-lime leading-none">SnapQuiz</h2>
+          <h2 className="text-3xl font-black italic text-brand-lime leading-none">SnapQuizGame</h2>
           <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 mt-1">{t.joinRoom}</span>
         </div>
         <button onClick={onBack} className="glass px-4 py-2 rounded-xl text-sm font-bold active:scale-95 transition">←</button>
       </div>
 
-      <GlassCard className="text-center space-y-6 shadow-2xl">
-        <div className="bg-brand-gold/10 p-4 rounded-2xl border border-brand-gold/20 animate-pulse">
-          <p className="text-[10px] font-black text-brand-gold uppercase tracking-widest">Guest Access (Via Link)</p>
-          <p className="text-sm font-bold text-white">{guestRemaining} / 5 {t.playsRemaining || "Plays Left Today"}</p>
+      <GlassCard className="text-center space-y-6 shadow-2xl border-white/20">
+        <div className="bg-brand-gold/10 p-4 rounded-2xl border border-brand-gold/20">
+          <p className="text-[10px] font-black text-brand-gold uppercase tracking-widest">Access Control</p>
+          <p className="text-sm font-bold text-white">{guestRemaining} / 5 {t.playsRemaining || "Demo Plays Left"}</p>
         </div>
 
-        <div className="space-y-2">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-white/50">{t.roomCode}</p>
-          <input 
-            autoFocus
-            maxLength={6}
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-            disabled={loading}
-            className="w-full bg-white/10 border-2 border-white/20 rounded-2xl p-6 text-4xl text-center font-black tracking-[0.8rem] focus:outline-none focus:border-brand-lime transition-all uppercase disabled:opacity-50"
-            placeholder="K7M9Q2"
-          />
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50">{t.roomCode}</p>
+            <input 
+              autoFocus
+              maxLength={6}
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              disabled={loading}
+              className="w-full bg-white/10 border-2 border-white/20 rounded-2xl p-6 text-4xl text-center font-black tracking-[0.8rem] focus:outline-none focus:border-brand-lime transition-all uppercase disabled:opacity-50"
+              placeholder="K7M9Q2"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50">{t.enterName}</p>
+            <input 
+              type="text"
+              maxLength={15}
+              value={playerName}
+              onChange={(e) => setPlayerName(e.target.value)}
+              disabled={loading}
+              className="w-full bg-white/5 border-2 border-white/10 rounded-2xl p-4 text-lg text-center font-bold focus:outline-none focus:border-brand-purple transition-all"
+              placeholder="e.g. Alex"
+            />
+          </div>
         </div>
 
         {error && (
@@ -111,7 +128,7 @@ const JoinRoomPage: React.FC<JoinRoomPageProps> = ({ onJoinSuccess, onBack, t })
 
         <ThreeDButton 
           variant="primary" 
-          className="w-full py-5" 
+          className="w-full py-5 text-xl" 
           disabled={code.length !== 6 || loading || guestRemaining <= 0}
           onClick={() => handleJoin(code)}
         >
@@ -132,5 +149,4 @@ const JoinRoomPage: React.FC<JoinRoomPageProps> = ({ onJoinSuccess, onBack, t })
   );
 };
 
-// Added missing default export
 export default JoinRoomPage;

@@ -91,7 +91,10 @@ export const translations = {
     ocrSuccess: "Text extracted successfully! Go to the Text tab to review.",
     ocrError: "Failed to read image. Make sure it's clear and bright.",
     extractingText: "Extracting Text...",
-    textReady: "Text Ready!"
+    textReady: "Text Ready!",
+    enterName: "Your Name (Optional)",
+    music: "Music",
+    sfx: "Effects"
   },
   de: {
     mixed: "Gemischt",
@@ -182,6 +185,9 @@ export const translations = {
     ocrSuccess: "Text erfolgreich extrahiert! Gehen Sie zum Tab 'Text'.",
     ocrError: "Fehler beim Lesen. Achten Sie auf Helligkeit.",
     extractingText: "Extrahiere Text...",
-    textReady: "Text bereit!"
+    textReady: "Text bereit!",
+    enterName: "Dein Name (Optional)",
+    music: "Musik",
+    sfx: "Effekte"
   }
 };
