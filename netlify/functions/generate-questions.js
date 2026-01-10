@@ -1,5 +1,3 @@
-import { GoogleGenAI, Type } from "@google/genai";
-
 export const handler = async (event, context) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -13,6 +11,9 @@ export const handler = async (event, context) => {
   }
 
   try {
+    // Dynamic import to solve ESM/CJS compatibility issues in Lambda environments
+    const { GoogleGenAI, Type } = await import("@google/genai");
+    
     const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
     
     if (!apiKey) {
@@ -72,6 +73,7 @@ export const handler = async (event, context) => {
     };
 
   } catch (error) {
+    console.error("Function Error:", error);
     return {
       statusCode: 500,
       headers,

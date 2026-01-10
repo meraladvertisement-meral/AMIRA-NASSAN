@@ -1,5 +1,3 @@
-import { GoogleGenAI } from "@google/genai";
-
 export const handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -13,6 +11,9 @@ export const handler = async (event) => {
   }
 
   try {
+    // Dynamic import to solve ESM/CJS compatibility issues in Lambda environments
+    const { GoogleGenAI } = await import("@google/genai");
+    
     const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
     const { image, language } = JSON.parse(event.body);
     const ai = new GoogleGenAI({ apiKey });
@@ -35,6 +36,7 @@ export const handler = async (event) => {
       body: JSON.stringify({ text: response.text })
     };
   } catch (error) {
+    console.error("OCR Error:", error);
     return {
       statusCode: 500,
       headers,
