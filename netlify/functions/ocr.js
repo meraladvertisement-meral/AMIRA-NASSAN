@@ -14,6 +14,8 @@ export const handler = async (event) => {
 
   try {
     const apiKey = process.env.API_KEY;
+    if (!apiKey) throw new Error("Missing API_KEY");
+
     const { image } = JSON.parse(event.body);
     const ai = new GoogleGenAI({ apiKey });
     
@@ -23,7 +25,7 @@ export const handler = async (event) => {
       model: "gemini-3-flash-preview",
       contents: [{ 
         parts: [
-          { text: "Extract all text from this image exactly." },
+          { text: "Extract all text from this image exactly. Maintain formatting where possible." },
           { inlineData: { mimeType: "image/jpeg", data: base64Data } }
         ] 
       }]
@@ -39,7 +41,7 @@ export const handler = async (event) => {
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: error.message })
+      body: JSON.stringify({ error: error.message || "Internal Server Error" })
     };
   }
 };

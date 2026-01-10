@@ -21,7 +21,7 @@ export const handler = async (event, context) => {
         headers,
         body: JSON.stringify({
           error: "CONFIG_ERROR",
-          message: "Missing API_KEY in Netlify Environment Variables"
+          message: "Missing API_KEY in environment variables"
         })
       };
     }
@@ -36,7 +36,7 @@ export const handler = async (event, context) => {
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: [{ parts: [{ text: `Analyze and generate a quiz with ${settings.questionCount} questions: ${content.substring(0, 10000)}` }] }],
+      contents: [{ parts: [{ text: `Analyze and generate a quiz with ${settings.questionCount} questions based on this content: ${content.substring(0, 10000)}` }] }],
       config: {
         systemInstruction,
         responseMimeType: "application/json",
@@ -70,11 +70,11 @@ export const handler = async (event, context) => {
     };
 
   } catch (error) {
-    console.error("Generate Questions Function Error:", error);
+    console.error("Quiz Generation Function Error:", error);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: error.message })
+      body: JSON.stringify({ error: error.message || "Internal Server Error" })
     };
   }
 };
