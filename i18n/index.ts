@@ -196,7 +196,7 @@ export const translations = {
     music: "Musik",
     sfx: "Effekte",
     referralBonusInfo: "Erhalte +2 Bonus-Spiele, wenn ein Freund über deinen Link beitritt!",
-    limitReachedMessage: "شارك والعب مع صديق واكسب لعبتين مجانية اضافية او رقي اشتراكك",
+    limitReachedMessage: "Daily limit reached! Share your link with a friend or upgrade to keep the fun going!",
     legalAgreement: "Ich stimme den AGB und der Datenschutzerklärung zu. Ich erkenne an, dass ich mit dem Kauf den sofortigen Zugang zu den digitalen Inhalten verlange und mein 14-tägiges Widerrufsrecht erlischt.",
     pleaseAgree: "Bitte stimmen Sie den rechtlichen Bedingungen zu, bevor Sie fortfahren."
   }

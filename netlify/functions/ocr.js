@@ -25,7 +25,7 @@ export const handler = async (event) => {
       model: "gemini-3-flash-preview",
       contents: [{ 
         parts: [
-          { text: "Extract all text from this image exactly. Maintain formatting where possible." },
+          { text: "Extract all text from this image exactly." },
           { inlineData: { mimeType: "image/jpeg", data: base64Data } }
         ] 
       }]
@@ -37,11 +37,10 @@ export const handler = async (event) => {
       body: JSON.stringify({ text: response.text })
     };
   } catch (error) {
-    console.error("OCR Function Error:", error);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: error.message || "Internal Server Error" })
+      body: JSON.stringify({ error: error.message })
     };
   }
 };

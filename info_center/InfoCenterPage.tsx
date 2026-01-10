@@ -95,7 +95,6 @@ const InfoCenterPage: React.FC<InfoCenterPageProps> = ({ onBack, lang, defaultSe
         </button>
       </div>
 
-      {/* Horizontal Scrolling Tab Bar */}
       <div className="flex gap-2 overflow-x-auto pb-4 custom-scrollbar no-scrollbar scroll-smooth">
         {tabs.map((tab) => (
           <button

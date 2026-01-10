@@ -38,6 +38,7 @@ import AdminAffiliatesPage from './pages/AdminAffiliatesPage';
 
 export default function App() {
   const [screen, setScreen] = useState<AppScreen>('LANDING');
+  // Changed default language to 'en'
   const [lang, setLang] = useState<Language>(() => (localStorage.getItem('sqg_ui_lang') as Language) || 'en');
   const [user, setUser] = useState<any>(null);
   const [isGuest, setIsGuest] = useState(() => localStorage.getItem('sqg_mode') === 'guest');
@@ -62,28 +63,30 @@ export default function App() {
   const audio = useAudio();
   const t = useMemo(() => translations[lang], [lang]);
 
+  // Set language preference
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    localStorage.setItem('sqg_ui_lang', lang);
+  }, [lang]);
+
   const changeLanguage = (l: Language) => {
     setLang(l);
-    localStorage.setItem('sqg_ui_lang', l);
   };
 
   const checkURLParams = () => {
     const params = new URLSearchParams(window.location.search);
     
-    // 1. Capture Referral ID
     const ref = params.get('ref');
     if (ref) {
       localStorage.setItem('sqg_referrer_uid', ref);
     }
 
-    // 2. Check for room join
     const joinCode = params.get('join');
     if (joinCode && joinCode.length === 6) {
       setScreen('JOIN_ROOM');
       return true;
     }
 
-    // 3. Check for payment success
     const payment = params.get('session_id');
     if (payment) {
       setScreen('PAYMENT_SUCCESS');

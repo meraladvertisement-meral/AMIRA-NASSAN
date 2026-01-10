@@ -1,6 +1,7 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 
-export const handler = async (event, context) => {
+export const handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -8,37 +9,30 @@ export const handler = async (event, context) => {
     'Content-Type': 'application/json'
   };
 
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' };
-  }
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
 
   try {
-    const apiKey = process.env.API_KEY;
-    
-    if (!apiKey) {
-      return {
-        statusCode: 500,
-        headers,
-        body: JSON.stringify({
-          error: "CONFIG_ERROR",
-          message: "Missing API_KEY in environment variables"
-        })
-      };
-    }
-
-    const body = JSON.parse(event.body);
-    const { content, settings, language } = body;
-    
-    const ai = new GoogleGenAI({ apiKey });
+    const { content, settings, language } = JSON.parse(event.body);
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const langName = language === 'de' ? 'German' : 'English';
-
-    const systemInstruction = `You are a professional educator. Create a quiz in ${langName}. Return ONLY valid JSON matching the schema.`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: [{ parts: [{ text: `Analyze and generate a quiz with ${settings.questionCount} questions based on this content: ${content.substring(0, 10000)}` }] }],
+      contents: [{ 
+        parts: [{ 
+          text: `Act as a professional educator and Product Manager for a kids' educational app. Create a ${langName} quiz with ${settings.questionCount} questions based on this content: "${content.substring(0, 10000)}". Difficulty: ${settings.difficulty}. Types: ${settings.types.join(',')}.` 
+        }] 
+      }],
       config: {
-        systemInstruction,
+        systemInstruction: `You are an AI specialized in creating interactive, high-quality educational quizzes for children and students. 
+        Rules:
+        1. Always return a strictly valid JSON object.
+        2. Ensure every question is child-friendly, accurate, and relevant to the provided text.
+        3. For MCQ: Provide 4 distinct options. The 'correctAnswer' must be identical to one of the options.
+        4. For TF: Options must be ["True", "False"] (or language equivalent).
+        5. For FITB: The prompt must include a '_______' placeholder where the answer fits.
+        6. Language: Respond strictly in ${langName}.
+        7. Tone: Encouraging, educational, and clear.`,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -52,7 +46,8 @@ export const handler = async (event, context) => {
                   type: { type: Type.STRING, enum: ["MCQ", "TF", "FITB"] },
                   prompt: { type: Type.STRING },
                   options: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  correctAnswer: { type: Type.STRING }
+                  correctAnswer: { type: Type.STRING },
+                  explanation: { type: Type.STRING }
                 },
                 required: ["id", "type", "prompt", "options", "correctAnswer"]
               }
@@ -60,21 +55,11 @@ export const handler = async (event, context) => {
           },
           required: ["questions"]
         }
-      },
+      }
     });
 
-    return {
-      statusCode: 200,
-      headers,
-      body: response.text
-    };
-
+    return { statusCode: 200, headers, body: response.text };
   } catch (error) {
-    console.error("Quiz Generation Function Error:", error);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: error.message || "Internal Server Error" })
-    };
+    return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) };
   }
 };
