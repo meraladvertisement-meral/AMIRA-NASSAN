@@ -11,7 +11,7 @@ export const handler = async (event) => {
   }
 
   try {
-    // Dynamic import to solve ESM/CJS compatibility issues in Lambda environments
+    // Dynamic import to handle the module compatibility issue
     const { GoogleGenAI } = await import("@google/genai");
     
     const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
@@ -30,13 +30,14 @@ export const handler = async (event) => {
       }]
     });
 
+    // Use property access for .text
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({ text: response.text })
     };
   } catch (error) {
-    console.error("OCR Error:", error);
+    console.error("OCR Function Error:", error);
     return {
       statusCode: 500,
       headers,

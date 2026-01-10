@@ -11,7 +11,7 @@ export const handler = async (event, context) => {
   }
 
   try {
-    // Dynamic import to solve ESM/CJS compatibility issues in Lambda environments
+    // Dynamic import to bridge ESM and CJS in Netlify's Node.js runtime
     const { GoogleGenAI, Type } = await import("@google/genai");
     
     const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
@@ -66,14 +66,17 @@ export const handler = async (event, context) => {
       },
     });
 
+    // Per @google/genai guidelines: .text is a property, not a function
+    const responseText = response.text;
+
     return {
       statusCode: 200,
       headers,
-      body: response.text
+      body: responseText
     };
 
   } catch (error) {
-    console.error("Function Error:", error);
+    console.error("Generate Questions Function Error:", error);
     return {
       statusCode: 500,
       headers,
