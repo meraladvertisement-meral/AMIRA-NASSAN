@@ -1,5 +1,5 @@
-import Stripe from 'stripe';
-import admin from 'firebase-admin';
+const Stripe = require('stripe');
+const admin = require('firebase-admin');
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -16,7 +16,7 @@ const SUBSCRIPTION_PRICES = [
   'price_1SnPnRGvLCUKCR9vx4AtlCmF'
 ];
 
-export const handler = async (event) => {
+exports.handler = async (event) => {
   const headers = {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
@@ -28,14 +28,10 @@ export const handler = async (event) => {
     return { statusCode: 200, headers, body: '' };
   }
 
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers, body: 'Method Not Allowed' };
-  }
-
   try {
     const { priceId, referrerUid } = JSON.parse(event.body);
-    
     const authHeader = event.headers.authorization || event.headers.Authorization;
+    
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) };
     }
@@ -49,9 +45,7 @@ export const handler = async (event) => {
     const baseUrl = process.env.FRONTEND_URL || 'https://snapquizgame.app';
 
     const metadata = { uid };
-    if (referrerUid) {
-      metadata.referrerUid = referrerUid;
-    }
+    if (referrerUid) metadata.referrerUid = referrerUid;
 
     const sessionConfig = {
       customer_email: email,
@@ -65,9 +59,7 @@ export const handler = async (event) => {
     };
 
     if (isSubscription) {
-      sessionConfig.subscription_data = {
-        metadata
-      };
+      sessionConfig.subscription_data = { metadata };
     }
 
     const session = await stripe.checkout.sessions.create(sessionConfig);
@@ -78,11 +70,6 @@ export const handler = async (event) => {
       body: JSON.stringify({ url: session.url })
     };
   } catch (error) {
-    console.error("Checkout session creation failed:", error);
-    return { 
-      statusCode: 500, 
-      headers, 
-      body: JSON.stringify({ error: error.message }) 
-    };
+    return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) };
   }
 };

@@ -1,4 +1,6 @@
-export const handler = async (event) => {
+const { GoogleGenAI } = require("@google/genai");
+
+exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -11,11 +13,8 @@ export const handler = async (event) => {
   }
 
   try {
-    // Dynamic import to handle the module compatibility issue
-    const { GoogleGenAI } = await import("@google/genai");
-    
     const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
-    const { image, language } = JSON.parse(event.body);
+    const { image } = JSON.parse(event.body);
     const ai = new GoogleGenAI({ apiKey });
     
     const base64Data = image.includes('base64,') ? image.split(',')[1] : image;
@@ -30,7 +29,6 @@ export const handler = async (event) => {
       }]
     });
 
-    // Use property access for .text
     return {
       statusCode: 200,
       headers,

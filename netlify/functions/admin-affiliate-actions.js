@@ -1,4 +1,4 @@
-import admin from 'firebase-admin';
+const admin = require('firebase-admin');
 
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -8,7 +8,7 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-export const handler = async (event) => {
+exports.handler = async (event) => {
   const headers = { 
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
@@ -20,13 +20,10 @@ export const handler = async (event) => {
 
   try {
     const authHeader = event.headers.authorization || event.headers.Authorization;
-    if (!authHeader) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Missing Auth' }) };
-    
     const idToken = authHeader.split('Bearer ')[1];
     const decodedToken = await admin.auth().verifyIdToken(idToken);
     const callerUid = decodedToken.uid;
 
-    // Security Check: Verify Admin
     const adminUids = (process.env.ADMIN_UIDS || '').split(',');
     if (!adminUids.includes(callerUid) && decodedToken.email !== 'info@snapquizgame.app') {
       return { statusCode: 403, headers, body: JSON.stringify({ error: 'Forbidden' }) };
@@ -35,38 +32,12 @@ export const handler = async (event) => {
     const { action, commissionId } = JSON.parse(event.body);
 
     if (action === 'list_pending') {
-      const snap = await db.collection('affiliate_commissions')
-        .where('state', '==', 'pending')
-        .orderBy('createdAt', 'desc')
-        .get();
-      
-      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      return { statusCode: 200, headers, body: JSON.stringify(list) };
+      const snap = await db.collection('affiliate_commissions').where('state', '==', 'pending').get();
+      return { statusCode: 200, headers, body: JSON.stringify(snap.docs.map(d => ({ id: d.id, ...d.data() }))) };
     }
 
-    if (action === 'approve') {
-      await db.collection('affiliate_commissions').doc(commissionId).update({
-        state: 'approved',
-        approvedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-      return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
-    }
-
-    if (action === 'reject') {
-      await db.collection('affiliate_commissions').doc(commissionId).update({
-        state: 'rejected',
-        rejectedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-      return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
-    }
-
-    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Unknown Action' }) };
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Unknown' }) };
   } catch (error) {
-    console.error("Admin affiliate action error:", error);
-    return { 
-      statusCode: 500, 
-      headers, 
-      body: JSON.stringify({ error: error.message }) 
-    };
+    return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) };
   }
 };

@@ -1,4 +1,6 @@
-export const handler = async (event, context) => {
+const { GoogleGenAI, Type } = require("@google/genai");
+
+exports.handler = async (event, context) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -11,9 +13,6 @@ export const handler = async (event, context) => {
   }
 
   try {
-    // Dynamic import to bridge ESM and CJS in Netlify's Node.js runtime
-    const { GoogleGenAI, Type } = await import("@google/genai");
-    
     const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
     
     if (!apiKey) {
@@ -28,11 +27,9 @@ export const handler = async (event, context) => {
     }
 
     const body = JSON.parse(event.body);
-    const { content, settings, isImage, language } = body;
+    const { content, settings, language } = body;
     
     const ai = new GoogleGenAI({ apiKey });
-    
-    const difficultyDesc = settings.difficulty === 'mixed' ? 'balanced' : settings.difficulty;
     const langName = language === 'de' ? 'German' : 'English';
 
     const systemInstruction = `You are a professional educator. Create a quiz in ${langName}. Return ONLY valid JSON.`;
@@ -66,13 +63,10 @@ export const handler = async (event, context) => {
       },
     });
 
-    // Per @google/genai guidelines: .text is a property, not a function
-    const responseText = response.text;
-
     return {
       statusCode: 200,
       headers,
-      body: responseText
+      body: response.text
     };
 
   } catch (error) {

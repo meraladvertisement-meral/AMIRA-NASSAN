@@ -6,14 +6,7 @@ import { billingService } from '../services/billingService';
 import { auth, googleProvider } from '../services/firebase';
 import { signInWithPopup } from "firebase/auth";
 
-interface JoinRoomPageProps {
-  onJoinSuccess: (roomId: string) => void;
-  onBack: () => void;
-  t: any;
-}
-
-// Fixed: Changed from named export to default export to match App.tsx import
-const JoinRoomPage: React.FC<JoinRoomPageProps> = ({ onJoinSuccess, onBack, t }) => {
+const JoinRoomPage: React.FC<{ onJoinSuccess: (roomId: string) => void; onBack: () => void; t: any }> = ({ onJoinSuccess, onBack, t }) => {
   const [code, setCode] = useState('');
   const [playerName, setPlayerName] = useState('');
   const [error, setError] = useState<string | null>(null);
